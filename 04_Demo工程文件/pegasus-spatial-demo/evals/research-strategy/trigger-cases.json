@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "subject": "research-orchestration",
+  "status": "definitions_only_not_run",
+  "trace_grader": "tool-trace-grader.ts",
+  "cases": [
+    {
+      "id": "trigger-substantive-gap-research",
+      "prompt": "请系统检索材料 X 的界面稳定性研究，更新已有综述中的 research gap，并给出可追溯报告。",
+      "should_trigger": true,
+      "expectation": {
+        "required_skill": "research-orchestration",
+        "must_precede_first_substantive_retrieval": true
+      }
+    },
+    {
+      "id": "trigger-multi-paper-conflict-research",
+      "prompt": "请查找并核对多篇全文，判断关于材料 Y 相变机理的冲突究竟来自条件差异还是实质争议。",
+      "should_trigger": true,
+      "expectation": {
+        "required_skill": "research-orchestration",
+        "must_precede_first_substantive_retrieval": true
+      }
+    },
+    {
+      "id": "skip-simple-concept-explanation",
+      "prompt": "请用三句话解释什么是固态电解质。",
+      "should_trigger": false,
+      "expectation": {
+        "forbid_skill": "research-orchestration",
+        "forbid_substantive_retrieval": true
+      }
+    },
+    {
+      "id": "skip-product-strategy-discussion",
+      "prompt": "我们是否应该把研究报告页面的筛选器放到左侧？只讨论产品交互，不查文献。",
+      "should_trigger": false,
+      "expectation": {
+        "forbid_skill": "research-orchestration",
+        "forbid_substantive_retrieval": true
+      }
+    },
+    {
+      "id": "skip-ordinary-file-edit",
+      "prompt": "把 analysis/notes.md 的一级标题改成“会议记录”，不要做科研检索。",
+      "should_trigger": false,
+      "expectation": {
+        "forbid_skill": "research-orchestration",
+        "forbid_substantive_retrieval": true
+      }
+    }
+  ]
+}

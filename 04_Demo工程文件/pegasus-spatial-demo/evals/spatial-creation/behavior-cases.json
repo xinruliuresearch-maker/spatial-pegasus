@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "status": "definitions_only_not_run",
+  "execution_policy": {
+    "network_allowed": false,
+    "model_or_agent_runs_in_ci": false,
+    "model_behavior_results_available": false,
+    "live_replay_required_before_demo": true
+  },
+  "expensive_tools": ["GenerateImage", "CreateObject3D", "CreateWorld3D"],
+  "cases": [
+    {
+      "id": "direct-object-request",
+      "prompt": "请生成一把独立的低矮胡桃木休闲椅，交付可旋转查看的 GLB。",
+      "expected": {
+        "must_call_one_of": ["CreateObject3D"],
+        "optional_before_target": ["GenerateImage"],
+        "max_calls": { "GenerateImage": 1, "CreateObject3D": 1, "CreateWorld3D": 0 },
+        "ask_user_before_first_target": false,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "direct-world-request",
+      "prompt": "请创建一间可以进入的深夜电台空间：狭长房间、钨丝灯、吸音木墙和环形控制台。",
+      "expected": {
+        "must_call_one_of": ["CreateWorld3D"],
+        "optional_before_target": ["GenerateImage"],
+        "max_calls": { "GenerateImage": 1, "CreateObject3D": 0, "CreateWorld3D": 1 },
+        "ask_user_before_first_target": false,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "reference-image-edit",
+      "prompt": "请编辑 output/spatial/images/room-v1.png：保留镜头和布局，把冷白光改成低照度琥珀色灯光，保存为 output/spatial/images/room-v2.png。",
+      "expected": {
+        "must_call_one_of": ["GenerateImage"],
+        "required_tool_fields": {
+          "GenerateImage": ["prompt", "input_image_path", "output_path"]
+        },
+        "max_calls": { "GenerateImage": 1, "CreateObject3D": 0, "CreateWorld3D": 0 },
+        "ask_user_before_first_target": false,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "ambiguous-object-or-world",
+      "prompt": "帮我做一个巴黎风格的空间资产。",
+      "expected": {
+        "must_call_one_of": ["AskUserQuestion"],
+        "max_calls_before_ask": { "GenerateImage": 0, "CreateObject3D": 0, "CreateWorld3D": 0 },
+        "question_must_resolve": ["object_or_world"],
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "scene-observation-adjustment",
+      "setup": "当前 observation 绑定 Scene v3，截图中左侧椅子遮挡入口，用户明确要求直接调整。",
+      "prompt": "根据这个观察点，把左侧椅子移到右后方；调整后用 Agent 相机截图复核。",
+      "expected": {
+        "must_call_one_of": ["TransformSceneObject"],
+        "must_eventually_call": ["CaptureSceneView"],
+        "must_use_observation_id": true,
+        "cost_only_ask_forbidden": true,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "format-basis-orientation-review",
+      "setup": "同一 Scene revision、instance transform 和 camera pose 下，GLB 截图显示椅子四脚向下，PLY 截图显示两脚朝天。",
+      "prompt": "对照两张真实渲染图判断问题属于 Scene 摆放还是资产坐标基，并说明下一步。",
+      "expected": {
+        "classification": "asset_basis_mismatch",
+        "must_not_call": ["TransformSceneObject"],
+        "required_review_checks": [
+          "gravity_direction",
+          "support_points",
+          "load_bearing_surface",
+          "same_camera_format_comparison"
+        ],
+        "ambiguous_single_view_status": "unknown",
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "lux-modular-environment-assembly",
+      "prompt": "请搭建一个可以继续编辑的未来主义滨水广场：先做完整地台、主道路和建筑外壳模块，再加入可单独移动的灯、树和长椅；远景只要氛围背景。",
+      "expected": {
+        "must_call_one_of": ["CreateObject3D"],
+        "must_eventually_call": ["CreateSpatialScene", "AddSceneObject"],
+        "world_role": "optional_ambient_background",
+        "editable_truth": "glb",
+        "must_not_require_fixed_order": true,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "lux-important-module-multiview",
+      "setup": "Workspace 已有同一建筑模块的一张已确认主视图和一张结构一致的后视图，背面入口会在 Scene 中可见。",
+      "prompt": "根据这两张一致视图生成这个建筑模块，并保留背面入口结构。",
+      "expected": {
+        "must_call_one_of": ["CreateObject3D"],
+        "required_tool_fields": {
+          "CreateObject3D": ["reference_image_paths", "output_path_prefix"]
+        },
+        "reference_image_count": 2,
+        "forbidden_tool_fields": {
+          "CreateObject3D": ["prompt"]
+        },
+        "must_not_call": ["CreateWorld3D"],
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "parallel-asset-fanout",
+      "setup": "场景已拆成入口模块、路灯、长椅三个相互独立的 Lux 资产，目前没有成员 Agent。",
+      "prompt": "并行完成这些资产并组装到同一个 Scene。",
+      "expected": {
+        "must_create_agents_min": 2,
+        "must_not_wait_for_first_agent_before_second": true,
+        "asset_agent_explicit_tools": ["GenerateImage", "CreateObject3D"],
+        "single_scene_mutation_owner": true,
+        "must_not_reject_due_to_project_slot_limit": true,
+        "worker_submission_concurrency_configurable": true,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "asset-maker-submit-and-continue",
+      "setup": "Asset Maker 负责两个资产；第一个概念图已经完成并通过真实图片检查。",
+      "prompt": "把第一个提交给 Lux，然后不要等待，继续设计第二个。",
+      "expected": {
+        "must_call_in_order": ["CreateObject3D", "GenerateImage"],
+        "must_not_call": ["WaitSpatialJob"],
+        "first_3d_result_status_one_of": ["prepared", "submitted", "running"],
+        "must_preserve_job_id": true,
+        "must_not_claim_published": true,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "async-spatial-published-notification",
+      "setup": "CreateObject3D 已经返回唯一一次 prepared ToolResult；成员已经空闲，后台任务随后 published。",
+      "prompt": "处理后台空间任务完成事件并继续组装。",
+      "expected": {
+        "notification_kind": "spatial_job_update",
+        "same_tool_use_second_result_forbidden": true,
+        "must_eventually_call": ["InspectSpatialArtifact"],
+        "must_route_to_scene_mutation_owner": true,
+        "duplicate_terminal_delivery_count": 1,
+        "final_language": "zh-CN"
+      }
+    },
+    {
+      "id": "two-ready-assets-serialized-placement",
+      "setup": "两个 Lux Job 几乎同时 published，同一个 Scene 当前为 v4。",
+      "prompt": "把两个新资产放入 Scene 并从 Agent 视角复核。",
+      "expected": {
+        "single_scene_mutation_owner": true,
+        "must_call_sequence": ["InspectSpatialScene", "AddSceneObject", "InspectSpatialScene", "AddSceneObject"],
+        "expected_final_scene_version": 6,
+        "scene_changed_unhandled": false,
+        "must_eventually_call": ["CaptureSceneView"],
+        "final_language": "zh-CN"
+      }
+    }
+  ]
+}

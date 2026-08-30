@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "skill": {
+    "name": "research-orchestration",
+    "target": "portable"
+  },
+  "status": "definitions_only_not_run",
+  "required_tools": [
+    "Skill",
+    "SciverseSearchPapers",
+    "SciverseSearchEvidence",
+    "SciverseListRelations",
+    "SciverseFetchPaper",
+    "ArxivSearchPapers",
+    "ArxivFetchPaper",
+    "SearchDocument",
+    "Read"
+  ],
+  "execution_policy": {
+    "mode": "live_sciverse_arxiv",
+    "ci_allowed": false,
+    "network_required": true,
+    "estimate_only_required_before_run": true,
+    "explicit_user_approval_required_after_estimate": true,
+    "approved_limits_required": [
+      "model_calls_or_cli_turns",
+      "literature_api_calls",
+      "document_downloads"
+    ],
+    "model_behavior_results_available": false
+  },
+  "cases": [
+    {
+      "id": "live-battery-review-update",
+      "prompt": "围绕石榴石型固态电解质与锂金属界面长期失效，先建立权威综述地图，再更新综述 cutoff 后的证据，判断仍开放、已回答和存在争议的博士研究方向。",
+      "setup_files": {},
+      "required_capabilities": ["filesystem", "network"],
+      "should_trigger": true,
+      "assertions": [
+        {"id": "scope-exists", "text": "Creates the research scope", "type": "file_exists", "path": "analysis/research-scope.md"},
+        {"id": "ledger-exists", "text": "Creates the evidence ledger", "type": "file_exists", "path": "references/evidence-ledger.md"},
+        {"id": "report-exists", "text": "Creates the research report", "type": "file_exists", "path": "output/research-report.md"},
+        {"id": "review-update-quality", "text": "Uses review cutoff and independent post-review primary evidence to update gap states", "type": "model", "target": "response"}
+      ]
+    },
+    {
+      "id": "live-catalysis-conflict",
+      "prompt": "研究单原子催化剂电催化 CO2 还原中的活性位重构：比较 operando 研究之间的结论冲突，区分条件依赖与真实争议，并提出可判别的长期研究问题。",
+      "setup_files": {},
+      "required_capabilities": ["filesystem", "network"],
+      "should_trigger": true,
+      "assertions": [
+        {"id": "scope-exists", "text": "Creates the research scope", "type": "file_exists", "path": "analysis/research-scope.md"},
+        {"id": "ledger-exists", "text": "Creates the evidence ledger", "type": "file_exists", "path": "references/evidence-ledger.md"},
+        {"id": "report-exists", "text": "Creates the research report", "type": "file_exists", "path": "output/research-report.md"},
+        {"id": "conflict-quality", "text": "Normalizes material, environment, measurement and endpoint before calling a true conflict", "type": "model", "target": "response"}
+      ]
+    },
+    {
+      "id": "live-semiconductor-hybrid",
+      "prompt": "针对新兴二维超宽禁带半导体的可控制备与缺陷机理，在直接文献不足的情况下结合上位综述和相邻材料研究，寻找可证伪且不过度外推的研究方向。",
+      "setup_files": {},
+      "required_capabilities": ["filesystem", "network"],
+      "should_trigger": true,
+      "assertions": [
+        {"id": "scope-exists", "text": "Creates the research scope", "type": "file_exists", "path": "analysis/research-scope.md"},
+        {"id": "ledger-exists", "text": "Creates the evidence ledger", "type": "file_exists", "path": "references/evidence-ledger.md"},
+        {"id": "report-exists", "text": "Creates the research report", "type": "file_exists", "path": "output/research-report.md"},
+        {"id": "hybrid-quality", "text": "Uses explicit transfer bridges and analogy breaks and keeps distant analogies at hypothesis level", "type": "model", "target": "response"}
+      ]
+    }
+  ]
+}

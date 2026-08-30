@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "research-strategy-v1",
+  "status": "definitions_only_not_run",
+  "comparison": {
+    "primary": "candidate",
+    "baseline": "no_skill",
+    "paired_cases": true,
+    "minimum_repetitions": 1,
+    "common_controls": [
+      "same_model_snapshot",
+      "same_tool_availability",
+      "same_workspace_fixtures",
+      "same_turn_order",
+      "same_runtime_limits"
+    ]
+  },
+  "configurations": [
+    {
+      "id": "no_skill",
+      "description": "Base Agent runtime without the materials-discovery Project Guide or any of the six candidate research Skills.",
+      "project_guide": null,
+      "skills": []
+    },
+    {
+      "id": "candidate",
+      "description": "Complete Sci-Pegasus research strategy candidate.",
+      "project_guide": {
+        "template_id": "materials-discovery",
+        "version": 1
+      },
+      "skills": [
+        "research-orchestration",
+        "literature-discovery",
+        "evidence-synthesis",
+        "gap-and-hypothesis",
+        "scientific-review",
+        "research-reporting"
+      ]
+    }
+  ],
+  "sets": {
+    "offline_output": "evals.json",
+    "offline_session": "session-scenarios.json",
+    "trigger_and_order": "trigger-cases.json",
+    "live": "live-cases.json"
+  },
+  "execution_policy": {
+    "model_or_agent_runs_in_ci": false,
+    "model_behavior_results_available": false,
+    "estimate_only_required_before_any_model_run": true,
+    "explicit_user_approval_required_after_estimate": true,
+    "approved_limits_required": [
+      "model_calls_or_cli_turns",
+      "literature_api_calls",
+      "document_downloads"
+    ],
+    "result_claim_rule": "Do not claim behavioral improvement until paired no_skill and candidate runs plus grading have completed."
+  }
+}

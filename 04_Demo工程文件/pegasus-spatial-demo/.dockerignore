@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.production.example
+_archive
+_temp
+pegasus-image.tar.gz
+*.log
+*.tsbuildinfo
+.DS_Store

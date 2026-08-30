@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pegasus Spatial LLM Registry",
+  "type": "object",
+  "required": ["aliases", "toolSelection", "defaultMainAlias"],
+  "properties": {
+    "$comment": { "type": "string" },
+    "aliases": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["realModel", "keyChannel"],
+        "properties": {
+          "realModel": { "type": "string", "minLength": 1 },
+          "keyChannel": { "enum": ["orchestrator", "tools"] },
+          "availableToPlans": {
+            "type": "array",
+            "items": { "enum": ["free", "pro", "team"] },
+            "uniqueItems": true
+          },
+          "displayName": { "type": "string" },
+          "displayDescription": { "type": "string" },
+          "supportsVision": { "type": "boolean" },
+          "contextWindow": { "type": "integer", "minimum": 1 },
+          "maxOutputTokens": { "type": "integer", "minimum": 1 },
+          "compactionMaxOutputTokens": { "type": "integer", "minimum": 1 },
+          "promptCacheTtl": { "enum": ["5m", "1h", "none"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "toolSelection": {
+      "type": "object",
+      "required": ["websearch", "memory"],
+      "properties": {
+        "websearch": { "$ref": "#/$defs/planAliases" },
+        "memory": { "$ref": "#/$defs/planAliases" }
+      },
+      "additionalProperties": false
+    },
+    "defaultMainAlias": { "$ref": "#/$defs/planAliases" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "planAliases": {
+      "type": "object",
+      "required": ["free", "pro", "team"],
+      "properties": {
+        "free": { "type": "string", "minLength": 1 },
+        "pro": { "type": "string", "minLength": 1 },
+        "team": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "asset": { "version": "2.0", "generator": "Pegasus Spatial" },
+  "scene": 0,
+  "scenes": [{ "nodes": [0] }],
+  "nodes": [{ "mesh": 0, "name": "Agent observer" }],
+  "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0 }, "indices": 1, "material": 0 }] }],
+  "materials": [{
+    "name": "Agent glow",
+    "pbrMetallicRoughness": { "baseColorFactor": [0.34, 1.0, 0.76, 1.0], "metallicFactor": 0.15, "roughnessFactor": 0.24 },
+    "emissiveFactor": [0.16, 0.62, 0.44],
+    "doubleSided": true
+  }],
+  "buffers": [{ "uri": "data:application/octet-stream;base64,AAAAAAAAAAApXI8+7FE4vo/C9b3sUTi+7FE4Po/C9b3sUTi+AAAAAK5HYT6PwvW9AAABAAIAAAACAAMAAAADAAEAAQADAAIA", "byteLength": 72 }],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 48, "target": 34962 },
+    { "buffer": 0, "byteOffset": 48, "byteLength": 24, "target": 34963 }
+  ],
+  "accessors": [
+    { "bufferView": 0, "componentType": 5126, "count": 4, "type": "VEC3", "min": [-0.18, -0.12, -0.18], "max": [0.18, 0.22, 0.28] },
+    { "bufferView": 1, "componentType": 5123, "count": 12, "type": "SCALAR" }
+  ]
+}

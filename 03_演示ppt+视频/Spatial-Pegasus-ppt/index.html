@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Spatial Pegasus · AI 世界编译器</title>
+  <style>
+    :root {
+      --field: #080a0a;
+      --plane: #111514;
+      --ink: #f5f2e9;
+      --muted: #b3b3aa;
+      --faint: #777d79;
+      --line: rgba(245, 242, 233, 0.2);
+      --brand: #9ee1c7;
+      --signal: #e2bf75;
+      --pad-x: clamp(34px, 5.4vw, 104px);
+      --pad-y: clamp(26px, 4.8vh, 58px);
+      font-family: "Avenir Next", "SF Pro Display", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--field); color: var(--ink); }
+    body { letter-spacing: -0.018em; -webkit-font-smoothing: antialiased; }
+    button { font: inherit; }
+
+    .deck { position: relative; width: 100%; height: 100%; isolation: isolate; background: var(--field); }
+    .deck::after { content: ""; position: fixed; inset: 0; z-index: 50; pointer-events: none; border: 1px solid rgba(255,255,255,.08); box-shadow: inset 0 0 0 10px rgba(0,0,0,.08); }
+    .slide { position: absolute; inset: 0; overflow: hidden; visibility: hidden; opacity: 0; transform: scale(1.012); transition: opacity 360ms ease, transform 520ms cubic-bezier(.2,.72,.2,1), visibility 0s linear 520ms; background: var(--field); }
+    .slide.is-active { visibility: visible; opacity: 1; transform: scale(1); transition-delay: 0s; z-index: 2; }
+    .frame { position: absolute; inset: var(--pad-y) var(--pad-x); z-index: 5; display: grid; grid-template-rows: auto 1fr auto; min-height: 0; pointer-events: none; }
+    .topline, .bottomline { min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: rgba(245,242,233,.68); font-size: clamp(10px, .78vw, 13px); letter-spacing: .17em; text-transform: uppercase; }
+    .brand-lockup { display: inline-flex; align-items: center; gap: 10px; letter-spacing: .08em; text-transform: none; }
+    .brand-lockup img { width: 24px; height: 24px; object-fit: contain; }
+    .stage { position: relative; min-height: 0; display: grid; align-items: center; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 22px; font-size: clamp(64px, 8.9vw, 154px); font-weight: 540; line-height: .83; letter-spacing: -.074em; }
+    h2 { max-width: 1100px; margin-bottom: 24px; font-size: clamp(44px, 6.2vw, 106px); font-weight: 540; line-height: .98; letter-spacing: -.058em; }
+    .eyebrow { margin: 0 0 18px; color: var(--brand); font-size: clamp(11px, .9vw, 15px); font-weight: 680; letter-spacing: .19em; text-transform: uppercase; }
+    .lede { max-width: 840px; margin-bottom: 0; color: var(--muted); font-size: clamp(17px, 1.7vw, 29px); line-height: 1.5; }
+    .visual { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.002); }
+    .scrim-left::before, .scrim-bottom::before, .scrim-full::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+    .scrim-left::before { background: linear-gradient(90deg, rgba(6,8,8,.94) 0%, rgba(6,8,8,.72) 29%, rgba(6,8,8,.1) 62%, rgba(6,8,8,0) 100%); }
+    .scrim-bottom::before { background: linear-gradient(0deg, rgba(6,8,8,.94) 0%, rgba(6,8,8,.16) 48%, rgba(6,8,8,.04) 100%); }
+    .scrim-full::before { background: rgba(5,7,7,.62); }
+    .axis { position: absolute; z-index: 3; width: 78px; height: 78px; opacity: .85; }
+    .axis::before, .axis::after { content: ""; position: absolute; background: var(--brand); }
+    .axis::before { width: 78px; height: 1px; top: 50%; left: 0; }
+    .axis::after { width: 1px; height: 78px; left: 50%; top: 0; }
+    .axis i { position: absolute; width: 7px; height: 7px; border: 1px solid var(--brand); top: calc(50% - 3px); left: calc(50% - 3px); background: rgba(8,10,10,.68); }
+    .anchor { position: absolute; width: 8px; height: 8px; border: 1px solid var(--brand); z-index: 4; }
+    .anchor::after { content: ""; position: absolute; left: 12px; top: 3px; width: 36px; height: 1px; background: rgba(158,225,199,.7); }
+
+    /* 01 — Cover */
+    .cover .visual { object-position: center; }
+    .cover .stage { align-items: end; padding-bottom: 9vh; }
+    .cover-copy { max-width: 1080px; text-shadow: 0 2px 30px rgba(0,0,0,.35); }
+    .cover h1 span { display: block; color: var(--brand); font-size: .25em; line-height: 1.1; margin: 20px 0 0 7px; letter-spacing: .16em; text-transform: uppercase; }
+    .cover-idea { max-width: 850px; margin: 0; color: rgba(245,242,233,.88); font-size: clamp(18px, 1.8vw, 31px); line-height: 1.5; }
+    .cover-idea strong { color: var(--ink); font-weight: 620; }
+
+    /* 02 — Problem */
+    .problem { background: #e8e4da; color: #171b1a; }
+    .problem .topline, .problem .bottomline { color: rgba(23,27,26,.58); }
+    .problem .brand-lockup img { filter: invert(1); opacity: .78; }
+    .problem .stage { grid-template-columns: minmax(0,.8fr) minmax(440px,1.2fr); gap: clamp(42px,6vw,120px); }
+    .problem h2 { max-width: 660px; }
+    .problem .eyebrow { color: #32765f; }
+    .problem .lede { max-width: 600px; color: #616762; }
+    .fragment-space { position: relative; height: min(70vh, 700px); }
+    .fragment-space::before, .fragment-space::after { content: ""; position: absolute; z-index: 3; background: #2e755e; }
+    .fragment-space::before { width: 120px; height: 1px; top: 12%; left: -26px; }
+    .fragment-space::after { width: 1px; height: 120px; top: 4%; left: 14px; }
+    .scene-card { position: absolute; overflow: hidden; border: 1px solid rgba(18,25,22,.22); background: #c9c6bd; box-shadow: 0 18px 44px rgba(20,24,22,.13); }
+    .scene-card img { width: 100%; height: 100%; object-fit: cover; }
+    .scene-card.main { inset: 10% 3% 8% 8%; }
+    .scene-card.detail-a { width: 36%; height: 33%; right: -3%; top: 2%; transform: rotate(1.3deg); }
+    .scene-card.detail-b { width: 31%; height: 30%; left: -3%; bottom: 1%; transform: rotate(-1.4deg); }
+    .fragment-tag { position: absolute; z-index: 5; min-width: 112px; padding: 11px 15px; border: 1px solid rgba(23,27,26,.38); background: rgba(235,232,222,.94); color: #252a27; font-size: clamp(10px,.76vw,13px); letter-spacing: .13em; text-transform: uppercase; }
+    .fragment-tag.one { left: 1%; top: 4%; }
+    .fragment-tag.two { right: 1%; top: 40%; }
+    .fragment-tag.three { left: 20%; bottom: 0; }
+
+    /* 03 — Process */
+    .process .visual { object-position: center; }
+    .process .stage { align-items: end; padding-bottom: 11vh; }
+    .process-copy { position: absolute; left: 0; top: 12%; max-width: 760px; }
+    .process-copy h2 { font-size: clamp(40px,5vw,82px); }
+    .process-rail { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); border-top: 1px solid rgba(245,242,233,.48); background: rgba(7,9,9,.56); backdrop-filter: blur(8px); pointer-events: auto; }
+    .process-step { min-height: 132px; padding: 20px 22px 18px; border-right: 1px solid rgba(245,242,233,.22); position: relative; }
+    .process-step:last-child { border-right: 0; }
+    .process-step::before { content: ""; position: absolute; top: -4px; left: 21px; width: 7px; height: 7px; background: var(--brand); }
+    .process-step small { display: block; margin-bottom: 17px; color: var(--brand); font-size: 10px; letter-spacing: .17em; }
+    .process-step strong { display: block; font-size: clamp(22px,2vw,34px); font-weight: 560; }
+    .process-step span { display: block; margin-top: 6px; color: rgba(245,242,233,.6); font-size: clamp(11px,.88vw,15px); }
+
+    /* 04 — Architecture */
+    .architecture .visual { object-position: center; opacity: .8; }
+    .architecture .stage { grid-template-columns: minmax(320px,.72fr) minmax(520px,1.28fr); gap: clamp(34px,5vw,100px); }
+    .architecture h2 { font-size: clamp(40px,5.2vw,86px); max-width: 720px; }
+    .system-stack { position: relative; height: min(65vh, 630px); display: grid; align-content: center; gap: 12px; }
+    .system-layer { position: relative; min-height: 78px; display: grid; grid-template-columns: 88px 1fr auto; align-items: center; gap: 18px; padding: 15px 18px; border: 1px solid rgba(245,242,233,.28); background: rgba(8,10,10,.82); }
+    .system-layer::after { content: ""; position: absolute; left: 43px; bottom: -13px; width: 1px; height: 12px; background: var(--brand); }
+    .system-layer:last-child::after { display: none; }
+    .system-layer b { color: var(--brand); font-size: 11px; letter-spacing: .15em; }
+    .system-layer strong { font-size: clamp(17px,1.45vw,25px); font-weight: 560; }
+    .system-layer span { color: rgba(245,242,233,.48); font-size: clamp(10px,.74vw,13px); letter-spacing: .08em; }
+    .system-layer.scene { border-color: rgba(158,225,199,.72); background: rgba(19,37,31,.9); }
+    .system-layer.manycore b { color: var(--signal); }
+
+    /* 05 — Persistent Scene */
+    .scene-core { background: #0a0c0c; }
+    .scene-core .stage { grid-template-columns: minmax(340px,.72fr) minmax(560px,1.28fr); gap: clamp(40px,5vw,100px); }
+    .scene-core h2 { font-size: clamp(44px,5.7vw,94px); max-width: 740px; }
+    .orbit { position: relative; justify-self: end; width: min(58vw, 760px); aspect-ratio: 1.18; }
+    .orbit-image { position: absolute; inset: 15% 17%; overflow: hidden; border: 1px solid rgba(158,225,199,.72); background: #111; }
+    .orbit-image img { width: 100%; height: 100%; object-fit: cover; object-position: center; opacity: .88; }
+    .orbit-image::after { content: "SCENE"; position: absolute; left: 20px; bottom: 18px; color: var(--brand); font-size: clamp(16px,1.4vw,24px); letter-spacing: .18em; }
+    .orbit-ring { position: absolute; inset: 3%; border: 1px solid rgba(245,242,233,.16); border-radius: 50%; }
+    .orbit-ring.inner { inset: 10%; border-color: rgba(158,225,199,.21); }
+    .orbit-node { position: absolute; min-width: 136px; padding: 11px 14px; border: 1px solid rgba(245,242,233,.35); background: #0c0f0e; }
+    .orbit-node b { display: block; color: var(--brand); font-size: 10px; letter-spacing: .16em; margin-bottom: 5px; }
+    .orbit-node strong { font-size: clamp(14px,1vw,18px); font-weight: 540; }
+    .orbit-node.spec { left: 1%; top: 8%; }
+    .orbit-node.graph { right: 0; top: 20%; }
+    .orbit-node.critic { right: 6%; bottom: 5%; }
+    .orbit-node.memory { left: 4%; bottom: 12%; }
+
+    /* 06 — Proof of build */
+    .proof-flow { background: #d9d5ca; color: #171a19; }
+    .proof-flow .topline, .proof-flow .bottomline { color: rgba(23,26,25,.55); }
+    .proof-flow .brand-lockup img { filter: invert(1); opacity: .72; }
+    .proof-flow .stage { grid-template-rows: auto 1fr; gap: clamp(24px,3.2vh,42px); }
+    .proof-head { display: flex; align-items: end; justify-content: space-between; gap: 44px; }
+    .proof-head h2 { max-width: 880px; margin-bottom: 0; font-size: clamp(40px,5.25vw,86px); }
+    .proof-head .eyebrow { color: #32765f; }
+    .proof-note { max-width: 390px; margin: 0 0 5px; color: #5f655f; font-size: clamp(14px,1.12vw,19px); line-height: 1.48; }
+    .proof-rail { display: grid; grid-template-columns: 1.15fr 1fr 1.15fr; gap: 14px; min-height: 0; }
+    .proof-card { position: relative; overflow: hidden; background: #a9aaa4; clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(18,23,21,.22); }
+    .proof-card img { width: 100%; height: 100%; object-fit: cover; }
+    .proof-card.asset img { object-position: 51% 58%; }
+    .proof-card.scene img { object-position: center; }
+    .proof-card::after { content: ""; position: absolute; inset: 45% 0 0; background: linear-gradient(0deg, rgba(5,7,7,.92), rgba(5,7,7,0)); }
+    .proof-label { position: absolute; z-index: 3; left: 22px; right: 20px; bottom: 18px; color: var(--ink); }
+    .proof-label small { display: block; margin-bottom: 6px; color: var(--brand); font-size: 10px; letter-spacing: .16em; }
+    .proof-label strong { display: block; font-size: clamp(20px,1.8vw,31px); font-weight: 560; }
+    .proof-label span { display: block; margin-top: 5px; color: rgba(245,242,233,.68); font-size: clamp(11px,.78vw,14px); }
+    .proof-arrow { position: absolute; z-index: 4; right: -20px; top: 50%; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid rgba(23,26,25,.5); background: #d9d5ca; color: #245f4d; font-size: 22px; }
+
+    /* 07 — Generated GLB evidence */
+    .asset-evidence .stage { grid-template-rows: auto 1fr; gap: clamp(22px,3vh,38px); }
+    .asset-evidence-head { display: flex; align-items: end; justify-content: space-between; gap: 40px; }
+    .asset-evidence-head h2 { max-width: 1120px; margin-bottom: 0; font-size: clamp(34px,4.1vw,68px); line-height: .96; }
+    .asset-evidence-head .lede { max-width: 440px; margin-bottom: 5px; font-size: clamp(14px,1.1vw,19px); }
+    .asset-pair { min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .asset-shot { position: relative; overflow: hidden; background: #e9ecef; clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(245,242,233,.2); }
+    .asset-shot img { width: 100%; height: 100%; object-fit: cover; object-position: center 50%; }
+    .asset-shot:nth-child(2) img { object-position: center 52%; }
+    .asset-shot:nth-child(3) img { object-position: center 51%; }
+    .asset-model { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; opacity: 0; background: #eef1f4; --poster-color: transparent; pointer-events: none; transition: opacity 180ms ease; }
+    .asset-shot.is-model-ready .asset-model { opacity: 1; pointer-events: auto; cursor: grab; }
+    .asset-shot.is-model-ready .asset-model:active { cursor: grabbing; }
+    .asset-model-badge { position: absolute; z-index: 5; top: 16px; right: 16px; display: none; padding: 7px 10px; border: 1px solid rgba(10,14,13,.16); background: rgba(245,247,248,.82); color: #26302d; font-size: 9px; letter-spacing: .12em; backdrop-filter: blur(8px); }
+    .asset-shot.is-model-ready .asset-model-badge { display: block; }
+    .asset-interaction { position: absolute; z-index: 4; top: 17px; right: 18px; padding: 7px 10px; border: 1px solid rgba(12,18,17,.18); background: rgba(246,248,250,.78); color: #39413f; font-size: 9px; letter-spacing: .13em; backdrop-filter: blur(8px); }
+    .asset-shot::after { content: ""; position: absolute; inset: 60% 0 0; background: linear-gradient(0deg, rgba(5,7,7,.94), rgba(5,7,7,0)); }
+    .asset-shot-copy { position: absolute; z-index: 3; left: 24px; bottom: 20px; color: var(--ink); }
+    .asset-shot-copy small { color: var(--brand); font-size: 10px; letter-spacing: .16em; }
+    .asset-shot-copy strong { display: block; margin-top: 6px; font-size: clamp(20px,1.65vw,29px); font-weight: 560; }
+    .asset-shot-copy span { display: block; margin-top: 5px; color: rgba(245,242,233,.68); font-size: clamp(11px,.8vw,14px); }
+
+    /* 08 — Scene evidence */
+    .scene-evidence .visual { object-position: center 58%; }
+    .scene-evidence .stage { align-items: end; padding-bottom: 7vh; }
+    .scene-evidence-copy { width: min(720px,47vw); padding: 28px 30px 26px; background: rgba(7,9,9,.78); backdrop-filter: blur(10px); clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(245,242,233,.28); }
+    .scene-evidence h2 { margin-bottom: 16px; font-size: clamp(39px,5vw,82px); }
+    .scene-evidence-copy .lede { font-size: clamp(15px,1.28vw,22px); }
+    .aerial-inset { position: absolute; z-index: 5; right: 0; top: 13%; width: min(37vw,620px); aspect-ratio: 1.67; overflow: hidden; background: #131616; clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px)); box-shadow: 0 22px 58px rgba(0,0,0,.34), inset 0 0 0 1px rgba(158,225,199,.56); }
+    .aerial-inset img { width: 100%; height: 100%; object-fit: cover; }
+    .aerial-inset span { position: absolute; left: 18px; bottom: 15px; padding: 7px 10px; background: rgba(7,9,9,.82); color: var(--brand); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; }
+
+    /* 09 — Demo */
+    .demo .visual { object-position: center; }
+    .demo .stage { align-items: end; padding-bottom: 8vh; }
+    .demo-copy { max-width: 1080px; }
+    .demo h2 { max-width: 980px; margin-bottom: 26px; text-shadow: 0 2px 26px rgba(0,0,0,.46); }
+    .demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; pointer-events: auto; }
+    .demo-action { min-width: 174px; padding: 13px 16px; border: 1px solid rgba(245,242,233,.38); background: rgba(7,9,9,.64); color: var(--ink); backdrop-filter: blur(9px); }
+    .demo-action small { color: var(--brand); margin-right: 12px; letter-spacing: .12em; }
+    .demo-button { min-height: 49px; padding: 0 24px; border: 1px solid var(--brand); background: var(--brand); color: #0a1813; cursor: pointer; font-weight: 660; letter-spacing: .04em; transition: background 180ms ease, color 180ms ease; }
+    .demo-button:hover { background: transparent; color: var(--brand); }
+
+    /* 10 — Moat */
+    .moat { background: #d9d5ca; color: #171a19; }
+    .moat .topline, .moat .bottomline { color: rgba(23,26,25,.55); }
+    .moat .brand-lockup img { filter: invert(1); opacity: .72; }
+    .moat .stage { grid-template-rows: auto 1fr; gap: 30px; }
+    .moat-title { display: flex; align-items: end; justify-content: space-between; gap: 40px; }
+    .moat h2 { max-width: 910px; margin-bottom: 0; font-size: clamp(40px,5.3vw,86px); }
+    .moat .eyebrow { color: #32765f; }
+    .moat-caption { max-width: 380px; margin: 0 0 6px; color: #5f655f; font-size: clamp(14px,1.1vw,19px); line-height: 1.5; }
+    .moat-gallery { display: grid; grid-template-columns: repeat(3, 1fr); min-height: 0; gap: 10px; }
+    .moat-panel { position: relative; overflow: hidden; border: 1px solid rgba(18,23,21,.2); }
+    .moat-panel img { width: 100%; height: 100%; object-fit: cover; transition: transform 600ms ease; }
+    .moat-panel:nth-child(2) img { object-position: 68% center; }
+    .moat-panel:nth-child(3) img { object-position: center 68%; }
+    .moat-panel::after { content: ""; position: absolute; inset: 42% 0 0; background: linear-gradient(0deg, rgba(5,7,7,.88), rgba(5,7,7,0)); }
+    .moat-panel strong { position: absolute; z-index: 3; left: 24px; bottom: 20px; color: var(--ink); font-size: clamp(23px,2.25vw,38px); font-weight: 540; }
+    .moat-panel small { display: block; margin-bottom: 7px; color: var(--brand); font-size: 10px; letter-spacing: .16em; }
+
+    /* 11 — Worlds */
+    .worlds .stage { grid-template-columns: minmax(280px,.55fr) minmax(640px,1.45fr); gap: clamp(38px,5vw,90px); }
+    .worlds h2 { max-width: 660px; }
+    .world-mosaic { height: min(72vh, 700px); display: grid; grid-template-columns: 1.05fr .95fr; grid-template-rows: 1fr 1fr; gap: 10px; }
+    .world-tile { position: relative; overflow: hidden; border: 1px solid var(--line); }
+    .world-tile:first-child { grid-row: 1 / span 2; }
+    .world-tile img { width: 100%; height: 100%; object-fit: cover; }
+    .world-tile:first-child img { object-position: 55% center; }
+    .world-tile:nth-child(3) img { object-position: center 66%; }
+    .world-tile::after { content: ""; position: absolute; inset: 50% 0 0; background: linear-gradient(0deg, rgba(6,8,8,.86), transparent); }
+    .world-label { position: absolute; z-index: 3; left: 20px; bottom: 18px; }
+    .world-label small { display: block; margin-bottom: 6px; color: var(--brand); font-size: 10px; letter-spacing: .16em; }
+    .world-label strong { font-size: clamp(18px,1.6vw,29px); font-weight: 540; }
+
+    /* 12 — Closing */
+    .closing .visual { object-position: center; }
+    .closing .stage { align-items: center; }
+    .closing-copy { max-width: 1020px; }
+    .closing h2 { font-size: clamp(58px,8.4vw,142px); line-height: .88; text-shadow: 0 2px 36px rgba(0,0,0,.46); }
+    .closing h2 span { display: block; color: var(--brand); }
+    .closing-en { margin: 34px 0 0; color: rgba(245,242,233,.86); font-size: clamp(16px,1.4vw,24px); letter-spacing: .13em; word-spacing: .26em; text-transform: uppercase; }
+    .credit-line { color: rgba(245,242,233,.67); text-transform: none; letter-spacing: .02em; }
+
+    /* Controls */
+    .controls { position: fixed; z-index: 80; right: max(18px, 2vw); top: 50%; transform: translateY(-50%); display: grid; gap: 9px; }
+    .dot { width: 8px; height: 8px; padding: 0; border: 1px solid rgba(245,242,233,.5); background: rgba(6,8,8,.36); cursor: pointer; transition: height 180ms ease, background 180ms ease, border-color 180ms ease; }
+    .dot.is-active { height: 28px; background: var(--brand); border-color: var(--brand); }
+    .progress { position: fixed; z-index: 80; left: 0; bottom: 0; width: 100%; height: 2px; background: rgba(255,255,255,.1); }
+    .progress span { display: block; width: 8.333%; height: 100%; background: var(--brand); transition: width 360ms cubic-bezier(.2,.72,.2,1); }
+    .hint { position: fixed; z-index: 75; right: max(34px, 5.4vw); bottom: 19px; color: rgba(245,242,233,.38); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; pointer-events: none; }
+
+    /* Architectural frame language — open corners, cut planes, anchor rails */
+    .frame::before,
+    .frame::after {
+      content: "";
+      position: absolute;
+      top: 48px;
+      width: 32px;
+      height: 32px;
+      opacity: .42;
+      pointer-events: none;
+    }
+
+    .frame::before {
+      left: 0;
+      border-top: 1px solid currentColor;
+      border-left: 1px solid currentColor;
+    }
+
+    .frame::after {
+      right: 0;
+      border-top: 1px solid currentColor;
+      border-right: 1px solid currentColor;
+    }
+
+    .scene-card {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+      box-shadow: inset 0 0 0 1px rgba(18,25,22,.22), 0 18px 44px rgba(20,24,22,.13);
+    }
+
+    .scene-card::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 21px;
+      width: 44px;
+      height: 1px;
+      background: rgba(50,118,95,.76);
+    }
+
+    .fragment-tag {
+      border: 0;
+      padding-left: 24px;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+      box-shadow: inset 0 0 0 1px rgba(23,27,26,.38);
+    }
+
+    .fragment-tag::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: calc(50% - 3px);
+      width: 6px;
+      height: 6px;
+      border: 1px solid #32765f;
+    }
+
+    .process-rail {
+      border-bottom: 0;
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+      box-shadow: inset 0 -1px 0 rgba(245,242,233,.18);
+    }
+
+    .process-step:first-child { padding-left: 28px; }
+    .process-step:nth-child(2)::before { border-radius: 50%; }
+    .process-step:nth-child(3)::before { transform: rotate(45deg); }
+    .process-step:nth-child(4)::before { background: transparent; border: 1px solid var(--brand); }
+
+    .system-stack { padding: 10px 0; }
+
+    .system-layer {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+      box-shadow: inset 0 0 0 1px rgba(245,242,233,.28);
+      transition: margin 260ms ease;
+    }
+
+    .system-layer::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 18px;
+      width: 42px;
+      height: 2px;
+      background: var(--brand);
+    }
+
+    .system-layer:nth-child(1) { margin-left: 11%; }
+    .system-layer:nth-child(2) { margin-left: 5%; }
+    .system-layer:nth-child(3) { margin-right: 4%; }
+    .system-layer:nth-child(4) { margin-left: 8%; }
+    .system-layer.scene { border: 0; box-shadow: inset 0 0 0 1px rgba(158,225,199,.72); }
+    .system-layer.manycore::before { background: var(--signal); }
+
+    .orbit-image {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+      box-shadow: inset 0 0 0 1px rgba(158,225,199,.72);
+    }
+
+    .orbit-node {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 0 100%);
+      box-shadow: inset 0 0 0 1px rgba(245,242,233,.35);
+    }
+
+    .orbit-node::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 28px;
+      height: 2px;
+      background: var(--brand);
+    }
+
+    .demo-action {
+      position: relative;
+      min-width: 182px;
+      padding-left: 24px;
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      box-shadow: inset 0 0 0 1px rgba(245,242,233,.38);
+    }
+
+    .demo-action::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 3px;
+      height: 21px;
+      background: var(--brand);
+    }
+
+    .demo-button {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+      box-shadow: inset 0 0 0 1px var(--brand);
+    }
+
+    .moat-gallery { gap: 14px; }
+
+    .moat-panel {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+      box-shadow: inset 0 0 0 1px rgba(18,23,21,.22);
+    }
+
+    .moat-panel:nth-child(1),
+    .moat-panel:nth-child(3) { margin-top: 16px; }
+
+    .moat-panel:nth-child(2) { margin-bottom: 16px; }
+
+    .moat-panel strong::before {
+      content: "";
+      display: inline-block;
+      width: 28px;
+      height: 2px;
+      margin: 0 10px 8px 0;
+      background: var(--brand);
+    }
+
+    .world-mosaic { gap: 14px; }
+
+    .world-tile {
+      border: 0;
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .world-tile:nth-child(2) { margin-right: 22px; }
+    .world-tile:nth-child(3) { margin-left: 22px; }
+
+    .world-label::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: -14px;
+      width: 44px;
+      height: 2px;
+      background: var(--brand);
+    }
+
+    .controls { align-items: end; gap: 11px; }
+
+    .dot {
+      width: 14px;
+      height: 2px;
+      border: 0;
+      background: rgba(245,242,233,.46);
+    }
+
+    .dot:nth-child(3n+2) { width: 8px; }
+    .dot.is-active { width: 34px; height: 2px; background: var(--brand); }
+
+    @media (max-width: 900px) {
+      .problem .stage, .architecture .stage, .scene-core .stage, .worlds .stage { grid-template-columns: 1fr; }
+      .fragment-space, .orbit { display: none; }
+      .system-stack { height: auto; }
+      .process-rail { grid-template-columns: repeat(2,1fr); }
+      .moat-gallery { grid-template-columns: 1fr; }
+      .moat-panel:nth-child(n+2) { display: none; }
+      .world-mosaic { height: 47vh; }
+      .moat-title { display: block; }
+      .moat-caption { margin-top: 12px; }
+      .system-layer:nth-child(n) { margin-left: 0; margin-right: 0; }
+      .world-tile:nth-child(n) { margin-left: 0; margin-right: 0; }
+      .frame::before, .frame::after { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { .slide, .progress span, .dot { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-label="Spatial Pegasus 路演演示">
+    <section class="slide cover scrim-bottom is-active" data-title="封面" aria-hidden="false">
+      <img class="visual" src="assets/world-imagined.png" alt="悬崖之间的超现实空间城市概念图" />
+      <span class="axis" style="right:9%;top:12%"><i></i></span>
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>AI World Compiler</span></header>
+        <div class="stage"><div class="cover-copy"><p class="eyebrow">VentureD · Deep Space</p><h1>Spatial<br />Pegasus<span>AI 世界编译器</span></h1><p class="cover-idea">生成让世界出现。<strong>真正的创作，发生在此后的每一次选择与改变中。</strong></p></div></div>
+        <footer class="bottomline"><span>01 / 12</span><span>Concept Visual · Spatial World</span></footer>
+      </div>
+    </section>
+
+    <section class="slide problem" data-title="真正的问题" aria-hidden="true">
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>The Missing Layer</span></header>
+        <div class="stage">
+          <div><p class="eyebrow">真正的问题</p><h2>世界能被生成，<br />却难以被继续改变。</h2><p class="lede">想法散落在对话、参考图与模型之间；一次局部修改，常常意味着重新开始。</p></div>
+          <div class="fragment-space" aria-label="碎片化创作资料">
+            <div class="scene-card main"><img src="assets/spacespec-table.png" alt="由参考图、平面、材质与模型组成的空间规格桌" /></div>
+            <div class="scene-card detail-a"><img src="assets/lux-module.png" alt="独立三维建筑资产" /></div>
+            <div class="scene-card detail-b"><img src="assets/interior-v2.png" alt="另一版空间参考图" /></div>
+            <span class="fragment-tag one">Intent</span><span class="fragment-tag two">3D Asset</span><span class="fragment-tag three">Reference</span>
+          </div>
+        </div>
+        <footer class="bottomline"><span>02 / 12</span><span>Fragmented Intent → Lost Context</span></footer>
+      </div>
+    </section>
+
+    <section class="slide process scrim-bottom" data-title="我们的方案" aria-hidden="true">
+      <img class="visual" src="assets/world-compiled.png" alt="由独立物体编排形成的三维室内世界" />
+      <span class="anchor" style="right:24%;top:26%"></span><span class="anchor" style="right:14%;top:53%"></span>
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>From Intent to World</span></header>
+        <div class="stage">
+          <div class="process-copy"><p class="eyebrow">我们的方案</p><h2>把想象，编译成一个可以持续演进的世界。</h2></div>
+          <div class="process-rail">
+            <div class="process-step"><small>01 · DESCRIBE</small><strong>说出</strong><span>自然语言描述世界</span></div>
+            <div class="process-step"><small>02 · ALIGN</small><strong>对齐</strong><span>参考与规格确认意图</span></div>
+            <div class="process-step"><small>03 · BUILD</small><strong>构建</strong><span>生成空间与独立物体</span></div>
+            <div class="process-step"><small>04 · EVOLVE</small><strong>演进</strong><span>移动、替换、继续修改</span></div>
+          </div>
+        </div>
+        <footer class="bottomline"><span>03 / 12</span><span>Describe · Align · Build · Evolve</span></footer>
+      </div>
+    </section>
+
+    <section class="slide architecture scrim-full" data-title="技术架构" aria-hidden="true">
+      <img class="visual" src="assets/agent-multiview.png" alt="同一空间的点云、平面、剖面与独立资产多视角审查" />
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Compiler Architecture</span></header>
+        <div class="stage">
+          <div><p class="eyebrow">技术架构</p><h2>不是转发 Prompt。<br />是编译世界。</h2><p class="lede">将模糊意图转成可执行规格，再把空间、资产和每次修改写回同一个 Scene。</p></div>
+          <div class="system-stack" aria-label="世界编译技术栈">
+            <div class="system-layer"><b>INPUT</b><strong>多模态意图</strong><span>语言 · 图片 · 参考资料</span></div>
+            <div class="system-layer"><b>AGENT</b><strong>检索 · 对齐 · 长程编排</strong><span>约束编译与任务恢复</span></div>
+            <div class="system-layer scene"><b>CORE</b><strong>持久化 Scene</strong><span>规格 · 对象 · 关系 · 版本</span></div>
+            <div class="system-layer manycore"><b>ENGINE</b><strong>群核空间与资产生成</strong><span>高质量 3D 能力</span></div>
+          </div>
+        </div>
+        <footer class="bottomline"><span>04 / 12</span><span>Intent → Specification → Scene → Generation</span></footer>
+      </div>
+    </section>
+
+    <section class="slide scene-core" data-title="持久化 Scene" aria-hidden="true">
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Persistent Scene</span></header>
+        <div class="stage">
+          <div><p class="eyebrow">系统核心</p><h2>世界不是结果文件，<br />而是持续存在的创作现场。</h2><p class="lede">底层模型可以升级，已经做过的选择、对象关系与修改历史不会消失。</p></div>
+          <div class="orbit" aria-label="围绕 Scene 运行的四个核心模块">
+            <div class="orbit-ring"></div><div class="orbit-ring inner"></div>
+            <div class="orbit-image"><img src="assets/persistent-scene.png" alt="保留空间核心并记录对象修改轨迹的持久化场景" /></div>
+            <div class="orbit-node spec"><b>01</b><strong>SpaceSpec</strong></div>
+            <div class="orbit-node graph"><b>02</b><strong>WorldGraph</strong></div>
+            <div class="orbit-node critic"><b>03</b><strong>Spatial Critic</strong></div>
+            <div class="orbit-node memory"><b>04</b><strong>World Memory</strong></div>
+          </div>
+        </div>
+        <footer class="bottomline"><span>05 / 12</span><span>Specification · Graph · Critic · Memory</span></footer>
+      </div>
+    </section>
+
+    <section class="slide proof-flow" data-title="真实创作链路" aria-hidden="true">
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Real Build · End to End</span></header>
+        <div class="stage">
+          <div class="proof-head"><div><p class="eyebrow">真实创作链路</p><h2>从概念画面，走到一个可继续编辑的 Scene。</h2></div><p class="proof-note">不是把一张图包装成 3D。Agent 把视觉方向拆成独立资产，再把它们写回同一个空间。</p></div>
+          <div class="proof-rail">
+            <article class="proof-card"><img src="assets/world-imagined.png" alt="由 Agent 生成并确认的世界概念图" /><div class="proof-label"><small>01 · ALIGN</small><strong>概念方向</strong><span>先确认世界的尺度、材质与情绪</span></div><i class="proof-arrow">→</i></article>
+            <article class="proof-card asset"><img src="assets/demo-glb-arch.png" alt="Lux3D 生成的独立巨构建筑 GLB" /><div class="proof-label"><small>02 · BUILD</small><strong>独立 GLB</strong><span>建筑成为可摆放、旋转与缩放的资产</span></div><i class="proof-arrow">→</i></article>
+            <article class="proof-card scene"><img src="assets/demo-scene-entry.png" alt="多个独立资产组合后的真实空间 Scene" /><div class="proof-label"><small>03 · COMPOSE</small><strong>空间 Scene</strong><span>资产进入同一坐标系并保留修改历史</span></div></article>
+          </div>
+        </div>
+        <footer class="bottomline"><span>06 / 12</span><span>Concept → Asset → Editable Scene</span></footer>
+      </div>
+    </section>
+
+    <section class="slide asset-evidence" data-title="真实 3D 资产" aria-hidden="true">
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Generated Assets · Lux3D</span></header>
+        <div class="stage">
+          <div class="asset-evidence-head"><div><p class="eyebrow">真实产出 · 独立资产</p><h2>生成的不是背景，<br />而是可反复编排的 3D 资产。</h2></div><p class="lede">每个 GLB 有自己的来源、边界、变换与版本；复杂世界可以从少量可控模块逐步长出来。</p></div>
+          <div class="asset-pair">
+            <article class="asset-shot"><img src="assets/demo-glb-crown-tower.png" alt="真实生成的冠塔建筑 GLB" /><model-viewer class="asset-model" src="assets/demo-crown-tower.glb" camera-controls auto-rotate rotation-per-second="12deg" shadow-intensity="1" exposure="1" interaction-prompt="none" alt="可旋转的冠塔建筑 GLB"></model-viewer><span class="asset-model-badge">拖动旋转 · 滚轮缩放</span><div class="asset-shot-copy"><small>GLB · ARCHITECTURE</small><strong>冠塔建筑</strong><span>复杂轮廓 · 材质完整 · 可独立编排</span></div></article>
+            <article class="asset-shot"><img src="assets/demo-glb-wind-banner.png" alt="真实生成的风幡场景资产 GLB" /><model-viewer class="asset-model" src="assets/demo-wind-banner.glb" camera-controls auto-rotate rotation-per-second="12deg" shadow-intensity="1" exposure="1" interaction-prompt="none" alt="可旋转的风幡装置 GLB"></model-viewer><span class="asset-model-badge">拖动旋转 · 滚轮缩放</span><div class="asset-shot-copy"><small>GLB · PROP</small><strong>风幡装置</strong><span>轻量装饰资产 · 可重复布置</span></div></article>
+            <article class="asset-shot"><img src="assets/demo-glb-wind-instrument.png" alt="真实生成的风向仪场景资产 GLB" /><model-viewer class="asset-model" src="assets/demo-wind-instrument.glb" camera-controls auto-rotate rotation-per-second="12deg" shadow-intensity="1" exposure="1" interaction-prompt="none" alt="可旋转的风向仪 GLB"></model-viewer><span class="asset-model-badge">拖动旋转 · 滚轮缩放</span><div class="asset-shot-copy"><small>GLB · INSTRUMENT</small><strong>风向仪</strong><span>功能性小品 · 场景语义补完</span></div></article>
+          </div>
+        </div>
+        <footer class="bottomline"><span>07 / 12</span><span>Reviewable · Transformable · Reusable</span></footer>
+      </div>
+    </section>
+
+    <section class="slide scene-evidence scrim-bottom" data-title="真实空间成果" aria-hidden="true">
+      <img class="visual" src="assets/demo-scene-final-enhanced.png" alt="真实生成并组装完成、经过展示级视觉增强的巨构建筑 Scene" />
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Live Scene · Revision in Place</span></header>
+        <div class="stage">
+          <div class="scene-evidence-copy"><p class="eyebrow">真实成果 · 空间舞台</p><h2>从独立资产，<br />到可进入的世界。</h2><p class="lede">地貌、主门、道路与塔楼被编排进同一 Scene。每个组成部分仍可被选中、移动、旋转、缩放，并自动形成新的 Scene Revision。</p></div>
+        </div>
+        <footer class="bottomline"><span>08 / 12</span><span>Enter · Inspect · Transform · Revise</span></footer>
+      </div>
+    </section>
+
+    <section class="slide demo scrim-bottom" data-title="现场演示" aria-hidden="true">
+      <img class="visual" src="assets/interior-v1.png" alt="可进入和编辑的室内三维场景" />
+      <span class="axis" style="right:12%;top:17%"><i></i></span>
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Live Demo</span></header>
+        <div class="stage"><div class="demo-copy"><p class="eyebrow">现场演示</p><h2>一句话，进入世界，<br />再改变它。</h2><div class="demo-actions"><span class="demo-action"><small>01</small>对齐意图</span><span class="demo-action"><small>02</small>生成空间</span><span class="demo-action"><small>03</small>移动物体</span><button class="demo-button" type="button" data-demo>打开实时演示 ↗</button></div></div></div>
+        <footer class="bottomline"><span>09 / 12</span><span>现场操作以系统实时结果为准</span></footer>
+      </div>
+    </section>
+
+    <section class="slide moat" data-title="技术壁垒" aria-hidden="true">
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>Technical Moat</span></header>
+        <div class="stage">
+          <div class="moat-title"><div><p class="eyebrow">真正的技术壁垒</p><h2>难的不是生成一次，<br />而是让世界经得起修改。</h2></div><p class="moat-caption">每次改变都应知道：什么必须保持，什么可以独立，什么需要重新验证。</p></div>
+          <div class="moat-gallery">
+            <article class="moat-panel"><img src="assets/interior-v2.png" alt="统一风格的室内空间" /><strong><small>WORLD</small>全局一致</strong></article>
+            <article class="moat-panel"><img src="assets/world-compiled.png" alt="被独立编排的室内对象" /><strong><small>OBJECT</small>局部独立</strong></article>
+            <article class="moat-panel"><img src="assets/lux-module.png" alt="可单独调整的三维建筑模块" /><strong><small>REVISION</small>修改可控</strong></article>
+          </div>
+        </div>
+        <footer class="bottomline"><span>10 / 12</span><span>Consistency · Independence · Controlled Change</span></footer>
+      </div>
+    </section>
+
+    <section class="slide worlds" data-title="应用边界" aria-hidden="true">
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>One Compiler · Many Worlds</span></header>
+        <div class="stage">
+          <div><p class="eyebrow">价值与边界</p><h2>从现实设计，<br />到无垠想象。</h2><p class="lede">同一套世界编译能力，让人创作空间，也让 Agent 在世界中观察、行动与学习。</p></div>
+          <div class="world-mosaic">
+            <article class="world-tile"><img src="assets/home-editable.png" alt="支持移动家具与局部修改的家居空间" /><div class="world-label"><small>REAL SPACE</small><strong>居住空间</strong></div></article>
+            <article class="world-tile"><img src="assets/world-imagined.png" alt="超现实叙事城市" /><div class="world-label"><small>IMAGINED WORLD</small><strong>超现实叙事</strong></div></article>
+            <article class="world-tile"><img src="assets/agent-exploration-world.png" alt="由多种材料和可操作物体构成的 Agent 探索环境" /><div class="world-label"><small>AGENT ENVIRONMENT</small><strong>世界环境</strong></div></article>
+          </div>
+        </div>
+        <footer class="bottomline"><span>11 / 12</span><span>Design · Narrative · Embodied Intelligence</span></footer>
+      </div>
+    </section>
+
+    <section class="slide closing scrim-left" data-title="结尾" aria-hidden="true">
+      <img class="visual" src="assets/literary-archive-world.png" alt="位于山体与地下海之间的超现实档案城市" />
+      <span class="anchor" style="right:27%;top:36%"></span>
+      <div class="frame">
+        <header class="topline"><span class="brand-lockup"><img src="assets/spatial-logo.png" alt="" />Spatial Pegasus</span><span>AI World Compiler</span></header>
+        <div class="stage"><div class="closing-copy"><p class="eyebrow">Spatial Pegasus</p><h2>说出一个世界。<br /><span>继续改变它。</span></h2><p class="closing-en">Say it. &nbsp; Step into it. &nbsp; Shape it.</p></div></div>
+        <footer class="bottomline"><span>12 / 12</span><span class="credit-line">群核提供空间生成能力 · Spatial Pegasus 让生成成为持续创作</span></footer>
+      </div>
+    </section>
+
+    <nav class="controls" aria-label="幻灯片导航"></nav>
+    <div class="progress" aria-hidden="true"><span></span></div>
+    <div class="hint">← → 翻页 · F 全屏 · D 演示</div>
+  </main>
+
+  <script src="assets/model-viewer-umd.min.js"></script>
+  <script>
+    (() => {
+      document.querySelectorAll('.asset-model').forEach((viewer) => {
+        viewer.addEventListener('load', () => viewer.closest('.asset-shot')?.classList.add('is-model-ready'), { once: true });
+        viewer.addEventListener('error', () => viewer.closest('.asset-shot')?.classList.remove('is-model-ready'));
+      });
+      const slides = [...document.querySelectorAll('.slide')];
+      const controls = document.querySelector('.controls');
+      const progress = document.querySelector('.progress span');
+      const demoUrl = 'http://127.0.0.1:3200';
+      let index = Math.max(0, Math.min(slides.length - 1, Number(location.hash.replace('#', '')) - 1 || 0));
+
+      slides.forEach((slide, i) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'dot';
+        button.setAttribute('aria-label', `${i + 1}. ${slide.dataset.title}`);
+        button.addEventListener('click', () => show(i));
+        controls.appendChild(button);
+      });
+
+      const dots = [...controls.children];
+      function show(next) {
+        index = (next + slides.length) % slides.length;
+        slides.forEach((slide, i) => {
+          const active = i === index;
+          slide.classList.toggle('is-active', active);
+          slide.setAttribute('aria-hidden', String(!active));
+          dots[i].classList.toggle('is-active', active);
+          dots[i].setAttribute('aria-current', active ? 'page' : 'false');
+        });
+        progress.style.width = `${((index + 1) / slides.length) * 100}%`;
+        history.replaceState(null, '', `#${index + 1}`);
+      }
+
+      function openDemo() { window.open(demoUrl, 'spatial-pegasus-demo'); }
+      document.querySelectorAll('[data-demo]').forEach((button) => button.addEventListener('click', openDemo));
+      document.addEventListener('keydown', (event) => {
+        if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(index + 1); }
+        else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(event.key)) { event.preventDefault(); show(index - 1); }
+        else if (event.key === 'Home') show(0);
+        else if (event.key === 'End') show(slides.length - 1);
+        else if (event.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+        else if (event.key.toLowerCase() === 'd') openDemo();
+      });
+
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (event) => { touchStartX = event.changedTouches[0].clientX; }, { passive: true });
+      document.addEventListener('touchend', (event) => { const delta = event.changedTouches[0].clientX - touchStartX; if (Math.abs(delta) > 50) show(index + (delta < 0 ? 1 : -1)); }, { passive: true });
+      show(index);
+    })();
+  </script>
+</body>
+</html>

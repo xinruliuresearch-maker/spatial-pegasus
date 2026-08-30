@@ -1,0 +1,68 @@
+# =============================================================================
+# Pegasus Spatial self-hosted stack.
+#
+# Isolation contract:
+#   - Compose project / image / network / volumes use the pegasus-spatial namespace.
+#   - The Next.js application listens on host and container port 3200.
+#   - MongoDB uses its normal container port 27017 and is exposed only on the
+#     host loopback interface at 27019 for local administration.
+#   - Application data lives in the dedicated `pegasus_spatial` database.
+#
+# Copy `.env.example` to `.env.production` and fill every secret
+# before starting the stack. Keep secrets, API keys, buckets, networks, and
+# volumes scoped to this deployment.
+# =============================================================================
+
+name: pegasus-spatial
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pegasus-spatial:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3200:3200"
+    env_file:
+      - .env.production
+    environment:
+      PORT: "3200"
+      # Pin the bundled Mongo service and database even if a copied env file
+      # still contains an old URI. External Mongo deployments should replace
+      # this value deliberately instead of inheriting unrelated configuration.
+      MONGODB_URI: mongodb://mongo:27017/pegasus_spatial
+      AGENT_RUNTIME_INTERNAL_BASE_URL: http://127.0.0.1:3200
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - pegasus-spatial-net
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27019:27017"
+    volumes:
+      - pegasus-spatial-mongo-data:/data/db
+      - pegasus-spatial-mongo-config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - pegasus-spatial-net
+
+networks:
+  pegasus-spatial-net:
+    name: pegasus-spatial-net
+    driver: bridge
+
+volumes:
+  pegasus-spatial-mongo-data:
+    name: pegasus-spatial-mongo-data
+  pegasus-spatial-mongo-config:
+    name: pegasus-spatial-mongo-config

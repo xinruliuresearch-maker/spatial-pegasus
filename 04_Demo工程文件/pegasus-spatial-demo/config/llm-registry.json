@@ -1,0 +1,81 @@
+{
+  "$schema": "./llm-registry.schema.json",
+  "$comment": "Pegasus Spatial model alias fallback seed. The Mongo model_config document is the runtime source of truth; this file provides an isolated cold-start configuration.",
+
+  "aliases": {
+    "main_standard": {
+      "realModel": "Gemini-3.1-pro",
+      "keyChannel": "orchestrator",
+      "availableToPlans": ["free", "pro", "team"],
+      "displayName": "Gemini 3.1 Pro",
+      "displayDescription": "通用推理，响应较快",
+      "supportsVision": true,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32768,
+      "compactionMaxOutputTokens": 8000,
+      "promptCacheTtl": "5m"
+    },
+    "main_pro": {
+      "realModel": "Claude-opus-4.6",
+      "keyChannel": "orchestrator",
+      "availableToPlans": ["pro", "team"],
+      "displayName": "Claude Opus 4.6",
+      "displayDescription": "复杂任务深度推理",
+      "supportsVision": true,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32768,
+      "compactionMaxOutputTokens": 8000,
+      "promptCacheTtl": "5m"
+    },
+    "main_deepseek": {
+      "realModel": "deepseek-v4-pro",
+      "keyChannel": "orchestrator",
+      "availableToPlans": ["pro", "team"],
+      "displayName": "DeepSeek V4 Pro",
+      "displayDescription": "深度推理，开启 high thinking",
+      "supportsVision": false,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32768,
+      "compactionMaxOutputTokens": 8000,
+      "promptCacheTtl": "5m"
+    },
+    "main_glm": {
+      "realModel": "GLM5.1",
+      "keyChannel": "orchestrator",
+      "availableToPlans": ["team"],
+      "displayName": "GLM 5.1",
+      "displayDescription": "智谱旗舰，团队专享",
+      "supportsVision": false,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32768,
+      "compactionMaxOutputTokens": 8000,
+      "promptCacheTtl": "5m"
+    },
+    "main_gpt": {
+      "realModel": "GPT5.4",
+      "keyChannel": "orchestrator",
+      "availableToPlans": ["team"],
+      "displayName": "GPT 5.4",
+      "displayDescription": "OpenAI 旗舰，团队专享",
+      "supportsVision": true,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32768,
+      "compactionMaxOutputTokens": 8000,
+      "promptCacheTtl": "5m"
+    },
+
+    "tool_memory_fast": { "realModel": "Gemini-3-flash",   "keyChannel": "tools" },
+    "tool_websearch":   { "realModel": "websearch",        "keyChannel": "tools" }
+  },
+
+  "toolSelection": {
+    "websearch":       { "free": "tool_websearch",   "pro": "tool_websearch",  "team": "tool_websearch" },
+    "memory":          { "free": "tool_memory_fast", "pro": "tool_memory_fast", "team": "tool_memory_fast" }
+  },
+
+  "defaultMainAlias": {
+    "free": "main_standard",
+    "pro":  "main_standard",
+    "team": "main_standard"
+  }
+}

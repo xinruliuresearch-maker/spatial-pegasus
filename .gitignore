@@ -1,0 +1,17 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local secrets and environment overrides
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+
+# Local build and dependency artifacts
+**/node_modules/
+**/.next/
+**/dist/
+**/coverage/
+*.log

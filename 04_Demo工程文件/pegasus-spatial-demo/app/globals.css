@@ -1,0 +1,3342 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   Design System: "Pegasus Spatial · Spatial Blueprint"
+   ============================================================
+   Philosophy:
+     - Cool paper-white surfaces keep dense spatial work calm and legible.
+     - Graphite ink carries structure; blueprint blue marks active creation.
+     - Boundaries rely on restrained tonal shifts and hairlines.
+     - The 3D world remains the visual subject; interface chrome recedes.
+   ============================================================ */
+
+:root {
+  /* System font stacks keep local and container builds fully offline. */
+  --font-manrope: "Avenir Next", Avenir, "Helvetica Neue", Arial;
+  --font-noto-sc: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei";
+  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas;
+
+  /* --- Surface Hierarchy (soft neutral, almost-white) ---
+     Three-tier design language:
+       Base    = body / shell / all pages         → --surface          (#f8f9fb)
+       Elevated = cards / popovers / input shell → --surface-container-lowest (#ffffff)
+       Chrome  = sidebars / chat container       → --surface-container-low / --surface-sidebar (#f1f3f7)
+     Original prototype-C palette restored. Elevated white pops off Base via
+     var(--hairline) real border + shadow (not by deepening Base, which
+     produces lavender wash). Chrome (sidebar/chat) keeps its original warm
+     gray so existing pages match the user's earlier design memory. */
+  --surface:                 #f8f9fb;
+  --surface-container-low:   #f1f3f7;
+  --surface-container:       #eceff4;
+  --surface-container-high:  #e3e7ed;
+  --surface-container-highest: #d8dde6;
+  --surface-container-lowest: #ffffff;
+  --surface-bright:          #ffffff;
+  /* Semantic alias — both AppSidebar (Tailwind `bg-surface-sidebar`) and the
+   * ChatContainer / right-side panel reach for this name. Keep it as a single
+   * alias so the two surfaces stay in lockstep. */
+  --surface-sidebar:         var(--surface-container-low);
+
+  /* 工作区文档面「纸」(类别 9)—— 干净近白纸底 + 柔投影,作为浮在活背景上的内容画布。 */
+  --paper:                   #ffffff;
+  --paper-edge:              rgba(20, 26, 38, 0.06);
+  --shadow-paper:            0 1px 2px rgba(16,18,24,0.05), 0 22px 50px -26px rgba(16,20,32,0.28), inset 0 1px 0 rgba(255,255,255,0.7);
+
+  /* --- Text Hierarchy (neutral charcoal, never pure black) --- */
+  /* 墨色层级 · 冷中性重标定(W1 面已转冷灰,墨色随之从暖中性灰改冷蓝 charcoal +
+     拉高 muted 对比:旧 #86868b 在 #f8f9fb 上仅 ~3.5:1、色温偏暖不搭)。 */
+  --on-surface:              #191c23;
+  --on-surface-variant:      #3a404c;
+  --secondary-text:          #646b7a;
+  --outline-variant:         #cbd0d9;
+
+  /* --- Token aliases used pervasively across .pmo-* classes.
+   * Previously these were referenced in CSS as `var(--ink-secondary)` etc.
+   * but never DEFINED — every such reference silently fell back to invalid,
+   * so borders / disabled colors etc. rendered with browser defaults rather
+   * than the intended palette. Defining them as aliases fixes those rules
+   * without rewriting every call site. */
+  --ink-secondary:           var(--on-surface-variant);
+  --ink-muted:               var(--secondary-text);
+  --ink-faint:               #949ba9;
+  --hairline:                #d2d6dd;
+  --surface-sink:            #e4e7ec;
+
+  /* Memory graph families: sage, blueprint, ochre, and a cool link hue. */
+  --mem-fam-a:               #74806a;
+  --mem-fam-b:               #5d77ad;
+  --mem-fam-c:               #b58a57;
+  --mem-link:                #7e8faa;
+
+  /* --- 品牌主色单一源头（设计系统先行 · 全站唯一来源） --- */
+  --brand-primary:           #536c9f;
+  --brand-primary-deep:      #3f568a;
+
+  /* --- Primary (blueprint signal on cool paper) --- */
+  --primary:                 var(--brand-primary);
+  --primary-container:       #dbe5fb;
+  --primary-deep:            var(--brand-primary-deep);   /* Hover / active darker primary */
+  --on-primary:              #ffffff;   /* White on terracotta */
+  --on-primary-container:    #1a2744;
+
+  /* --- Secondary --- */
+  --secondary-container:     #dfe6f2;
+  --on-secondary-container:  #57657a;
+
+  /* --- Semantic --- */
+  --error:                   #ba1a1a;
+  --error-container:         #ffdad6;
+  --success:                 #2e7d32;
+  --success-container:       #c8e6c9;
+  --warning:                 #e65100;
+  --warning-container:       #ffe0b2;
+
+  /* --- Tint & Glass --- */
+  --surface-tint:            #536c9f;
+  --scrim:                   rgba(31, 31, 35, 0.5);
+
+  /* --- Ambient Shadows (neutral basis to match soft white) --- */
+  --shadow-color:            rgba(31, 31, 35, 0.04);
+  --shadow-ambient:          0 1px 2px rgba(31, 31, 35, 0.03), 0 4px 14px rgba(31, 31, 35, 0.04);
+  --shadow-elevated:         0 2px 6px rgba(31, 31, 35, 0.04), 0 12px 32px rgba(31, 31, 35, 0.06);
+  --shadow-hover:            0 2px 4px rgba(31, 31, 35, 0.04), 0 8px 24px rgba(31, 31, 35, 0.08);
+
+  /* --- 玻璃岛材质 token ---
+   * 材质四件套:半透玻璃底 + backdrop-filter blur(20px) saturate(1.5)
+   *           + 极淡玻璃边(替代 1px 硬发丝边)+ 多层柔阴影含顶部内高光。
+   * --glass-panel-bg 是「文字密集面」的可读性护栏值(聊天长文本/设置/侧栏,
+   * ~.70-.82 区间;纯装饰浮层可另行更透)——供用户一值全站校准。
+   * --shadow-glass 使用贴地薄影 + 大扩散柔影 + inset 顶高光，
+   * 元素之间靠层次而非边线区分。 */
+  --glass-panel-bg:          rgba(255, 255, 255, 0.78);
+  --glass-panel-border:      rgba(255, 255, 255, 0.55);
+  --shadow-glass:            0 1px 2px rgba(16, 20, 32, 0.05),
+                             0 12px 30px -14px rgba(16, 20, 32, 0.20),
+                             inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  /* --- Primary authority tints (for content-weighted highlights).
+   * 07/10/12/18 numeric aliases match the opacity percentages used at call
+   * sites; weak/mid/strong are the semantic names. Both forms point to the
+   * same values so existing CSS that uses either compiles correctly. */
+  --primary-tint-weak:       rgba(83, 108, 159, 0.07);
+  --primary-tint-mid:        rgba(83, 108, 159, 0.12);
+  --primary-tint-strong:     rgba(83, 108, 159, 0.22);
+  --primary-tint-07:         rgba(83, 108, 159, 0.07);
+  --primary-tint-10:         rgba(83, 108, 159, 0.10);
+  --primary-tint-12:         rgba(83, 108, 159, 0.12);
+  --primary-tint-18:         rgba(83, 108, 159, 0.18);
+
+  /* --- 圆角刻度（四档收敛）---
+   * 主题无关，明暗共用。Tailwind 工具类经 @theme inline 生成
+   * rounded-ctrl / rounded-card / rounded-glass / rounded-pill。 */
+  --r-ctrl:                  12px;      /* 按钮 / chip / tab / 小控件 */
+  --r-card:                  16px;      /* 卡片 / 行 / 输入框 / 列表项 / 容器 */
+  --r-glass:                 20px;      /* 模态 / hero / 浮动大面板 */
+  --r-pill:                  9999px;    /* 胶囊 */
+
+  /* --- Legacy mappings --- */
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+
+  /* 全站根静态网点（body 最低背景层）。 */
+  --backdrop-dot: rgba(22, 30, 48, 0.12);
+}
+
+/* The competition build deliberately ships one visual identity. Even if a
+   stale `dark` class is injected before hydration, it inherits the warm-paper
+   tokens above instead of opening a second black/blue palette. */
+.dark {
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Surface tokens as Tailwind colors */
+  --color-surface: var(--surface);
+  --color-surface-low: var(--surface-container-low);
+  --color-surface-mid: var(--surface-container);
+  --color-surface-high: var(--surface-container-high);
+  --color-surface-highest: var(--surface-container-highest);
+  --color-surface-lowest: var(--surface-container-lowest);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-sidebar: var(--surface-sidebar);
+
+  /* Text tokens */
+  --color-ink: var(--on-surface);
+  --color-ink-secondary: var(--on-surface-variant);
+  --color-ink-muted: var(--secondary-text);
+  --color-ghost-border: var(--outline-variant);
+
+  /* Primary tokens */
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary: var(--on-primary);
+
+  /* Primary authority tints — use via Tailwind arbitrary syntax:
+     bg-[var(--primary-tint-weak)]  shadow-[0_0_0_4px_var(--primary-tint-mid)] */
+
+  /* Secondary tokens */
+  --color-chip-bg: var(--secondary-container);
+  --color-chip-text: var(--on-secondary-container);
+
+  /* Semantic */
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  /* Tint */
+  --color-tint: var(--surface-tint);
+
+  /* Fonts */
+  --font-sans: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Type scale (类别 8) — 8 档规范梯级,替代散落的 17 个碎片字号。
+     Tailwind v4：生成 text-display … text-micro 工具类(含各自行高)。
+     语义:display=hero / title=页面标题 / heading=区块标题 / body=主阅读 /
+     body-sm=次正文(叙述) / label=控件标签 / caption=辅助 / micro=最小(含 mono 标签)。 */
+  --text-display: 4rem;         --text-display--line-height: 1.05;
+  --text-title: 1.625rem;       --text-title--line-height: 1.2;
+  --text-heading: 1.125rem;     --text-heading--line-height: 1.35;
+  --text-body: 0.875rem;        --text-body--line-height: 1.65;
+  --text-body-sm: 0.8125rem;    --text-body-sm--line-height: 1.6;
+  --text-label: 0.75rem;        --text-label--line-height: 1.4;
+  --text-caption: 0.6875rem;    --text-caption--line-height: 1.4;
+  --text-micro: 0.625rem;       --text-micro--line-height: 1.3;
+
+  /* Radius scale → rounded-ctrl / rounded-card / rounded-glass / rounded-pill */
+  --radius-ctrl: var(--r-ctrl);
+  --radius-card: var(--r-card);
+  --radius-glass: var(--r-glass);
+  --radius-pill: var(--r-pill);
+}
+
+/* ============================================================
+   Global Body
+   ============================================================ */
+body {
+  /* 全站最低背景 = --surface 底色 + 静态墨点阵。 */
+  background-color: var(--surface);
+  background-image: radial-gradient(circle, var(--backdrop-dot) 1.1px, transparent 1.1px);
+  background-size: 20px 20px;
+  color: var(--on-surface);
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes statusSlideIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Remote UI adaptation: the atmosphere keeps the branch's slow "breathing"
+ * composition, but uses composited CSS gradients instead of a second WebGL
+ * canvas. This avoids blocking screenshots and scene-canvas readback. */
+.pmo-app-atmosphere {
+  --pmo-atmosphere-opacity: .48;
+  background: #f8f9fb;
+  transition: opacity 700ms ease;
+}
+.pmo-app-atmosphere[data-state='landing'] { --pmo-atmosphere-opacity: .66; }
+.pmo-app-atmosphere[data-state='running'] { --pmo-atmosphere-opacity: .82; }
+.pmo-app-atmosphere__mass {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  opacity: var(--pmo-atmosphere-opacity);
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center;
+  will-change: transform;
+}
+.pmo-app-atmosphere__mass--clay {
+  left: -18vw;
+  top: -34vh;
+  width: 76vw;
+  height: 92vh;
+  background: radial-gradient(ellipse at center, rgba(93, 119, 173, .27), rgba(132, 158, 211, .10) 42%, transparent 70%);
+  animation: pmo-atmosphere-clay 27s ease-in-out infinite alternate;
+}
+.pmo-app-atmosphere__mass--sage {
+  bottom: -39vh;
+  right: -20vw;
+  width: 80vw;
+  height: 95vh;
+  background: radial-gradient(ellipse at center, rgba(116, 128, 106, .20), rgba(166, 184, 153, .09) 44%, transparent 72%);
+  animation: pmo-atmosphere-sage 33s ease-in-out infinite alternate;
+}
+.pmo-app-atmosphere__mass--paper {
+  left: 36vw;
+  top: 18vh;
+  width: 48vw;
+  height: 58vh;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, .82), rgba(218, 227, 247, .10) 56%, transparent 76%);
+  animation: pmo-atmosphere-paper 22s ease-in-out infinite alternate;
+}
+.pmo-app-atmosphere__grid {
+  position: absolute;
+  inset: 0;
+  opacity: .11;
+  background-image: linear-gradient(rgba(45, 52, 47, .18) 1px, transparent 1px), linear-gradient(90deg, rgba(45, 52, 47, .18) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+.pmo-app-atmosphere__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, rgba(255, 254, 250, .15), transparent 42%, rgba(255, 254, 250, .18));
+}
+@keyframes pmo-atmosphere-clay {
+  to { transform: translate3d(10vw, 8vh, 0) scale(1.13) rotate(5deg); }
+}
+@keyframes pmo-atmosphere-sage {
+  to { transform: translate3d(-12vw, -7vh, 0) scale(1.1) rotate(-4deg); }
+}
+@keyframes pmo-atmosphere-paper {
+  to { transform: translate3d(-8vw, 9vh, 0) scale(1.18); }
+}
+
+/* Resize-aware composer ribbon, adapted from the integration branch. */
+.pmo-flowing-light {
+  position: relative;
+  isolation: isolate;
+}
+.pmo-flowing-light__path {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.pmo-flowing-light__segment {
+  fill: none;
+  stroke: color-mix(in srgb, var(--primary) 70%, #fff);
+  stroke-linecap: round;
+  stroke-width: var(--pmo-flow-width);
+  stroke-dasharray: var(--pmo-flow-dash) var(--pmo-flow-gap);
+  stroke-dashoffset: var(--pmo-flow-offset);
+  opacity: calc(var(--pmo-flow-opacity) * .55);
+  animation: pmo-flowing-light-travel var(--pmo-flow-duration, 12s) linear infinite;
+  transition: opacity 220ms ease;
+}
+.pmo-flowing-light:focus-within .pmo-flowing-light__segment,
+.pmo-flowing-light:hover .pmo-flowing-light__segment {
+  opacity: var(--pmo-flow-opacity);
+}
+@keyframes pmo-flowing-light-travel {
+  to { stroke-dashoffset: var(--pmo-flow-end); }
+}
+
+/* Immersive workspace media: the breadcrumb already carries metadata, so the
+ * image/model itself gets the available stage instead of another card header. */
+.pmo-progressive-image--unframed,
+.pmo-progressive-image--unframed .pmo-progressive-image-loader {
+  background: transparent;
+}
+.pmo-viewer-tool {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: var(--r-ctrl);
+  color: #fff;
+  background: rgba(21, 24, 22, .66);
+  box-shadow: 0 8px 24px rgba(21, 24, 22, .16);
+  backdrop-filter: blur(14px);
+  transition: background 160ms ease, transform 160ms ease;
+}
+.pmo-viewer-tool:hover { background: rgba(21, 24, 22, .86); transform: translateY(-1px); }
+.pmo-viewer-tool:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.pmo-viewer-tool svg { width: 17px; height: 17px; }
+.pmo-viewer-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 10, 9, .94);
+  backdrop-filter: blur(12px);
+  animation: fade-in 160ms ease-out;
+}
+.pmo-viewer-close {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  z-index: 2;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 25px;
+  font-weight: 300;
+  line-height: 1;
+  background: rgba(0,0,0,.46);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+.pmo-viewer-close:hover { background: rgba(255,255,255,.14); }
+.pmo-viewer-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pmo-app-atmosphere__mass,
+  .pmo-flowing-light__segment {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   Custom Scrollbar — refined, subtle
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-container-high);
+  border-radius: var(--r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--outline-variant);
+}
+
+/* ============================================================
+   Prose Overrides — editorial reading
+   ============================================================ */
+/* 浅色 prose 对齐 app ink token + 接 --font-sans 栈(工作区 markdown 里的
+   中文用 Noto Sans SC 而非 Tailwind 默认)。暗色见下方 .dark .prose 变量块。 */
+.prose {
+  --tw-prose-body: var(--on-surface-variant);
+  --tw-prose-headings: var(--on-surface);
+  --tw-prose-lead: var(--on-surface-variant);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--on-surface);
+  --tw-prose-counters: var(--on-surface-variant);
+  --tw-prose-bullets: var(--outline-variant);
+  --tw-prose-hr: var(--hairline);
+  --tw-prose-quotes: var(--on-surface);
+  --tw-prose-quote-borders: color-mix(in srgb, var(--primary) 40%, transparent);
+  --tw-prose-captions: var(--on-surface-variant);
+  --tw-prose-code: var(--on-surface);
+  --tw-prose-th-borders: var(--outline-variant);
+  --tw-prose-td-borders: var(--hairline);
+  font-family: var(--font-sans);
+}
+.prose :where(h1, h2, h3, h4):not(:where([class~="not-prose"] *)) {
+  font-variation-settings: 'wght' 600;
+  letter-spacing: -0.01em;
+}
+
+.prose pre {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border: none;
+  border-radius: var(--r-card);
+}
+
+.prose code::before,
+.prose code::after {
+  content: none;
+}
+
+.prose code {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  padding: 0.15em 0.4em;
+  border-radius: 0.375rem;
+  font-size: 0.875em;
+}
+
+/* Dark mode prose colors. Tailwind Typography uses CSS variables internally
+   (--tw-prose-headings, --tw-prose-body, etc.) and its own selectors are
+   wrapped in :where() so any custom selector like `.dark .prose h1` ends up
+   at the same specificity and source-order can stamp it out. The robust fix
+   is to override the variables themselves on `.dark`, which the plugin's own
+   selectors then pick up. */
+.dark .prose,
+.dark .prose-invert {
+  --tw-prose-body: var(--on-surface-variant);
+  --tw-prose-headings: var(--on-surface);
+  --tw-prose-lead: var(--on-surface-variant);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--on-surface);
+  --tw-prose-counters: var(--on-surface-variant);
+  --tw-prose-bullets: var(--on-surface-variant);
+  --tw-prose-hr: var(--outline-variant);
+  --tw-prose-quotes: var(--on-surface);
+  --tw-prose-quote-borders: var(--outline-variant);
+  --tw-prose-captions: var(--on-surface-variant);
+  --tw-prose-kbd: var(--on-surface);
+  --tw-prose-kbd-shadows: 0 0 0;
+  --tw-prose-code: var(--on-surface);
+  --tw-prose-pre-code: var(--on-surface);
+  --tw-prose-pre-bg: var(--surface-container-high);
+  --tw-prose-th-borders: var(--outline-variant);
+  --tw-prose-td-borders: var(--outline-variant);
+}
+
+/* ============================================================
+   Workspace Quote Highlight
+   ============================================================ */
+mark.workspace-quote-highlight {
+  background-color: var(--secondary-container);
+  color: inherit;
+  border-radius: 3px;
+  padding: 1px 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ============================================================
+   Utility: Ghost Border (for inputs, accessibility)
+   rgba basis shifted to warm-ink to match cream paper.
+   ============================================================ */
+.ghost-border {
+  box-shadow: inset 0 0 0 1px rgba(20, 26, 38, 0.10);
+}
+
+.ghost-border-focus {
+  box-shadow: inset 0 0 0 1px rgba(20, 26, 38, 0.10),
+              0 2px 0 0 var(--surface-tint);
+}
+
+/* 玻璃焦点(墨线家族 · 模式 A):散落输入的旧「focus 底部蓝墨线」统一替换为
+   柔性主色 halo —— 半透主色 1px 内边 + 3px 柔 halo + 柔下投影,无硬线。
+   用法:文本输入上加 class="pmo-field-focus"(替掉 focus:shadow-[inset_0_-2px…])。 */
+.pmo-field-focus:focus,
+.pmo-field-focus:focus-within {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--primary) 8%, transparent),
+    0 4px 16px -4px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+.dark .pmo-field-focus:focus,
+.dark .pmo-field-focus:focus-within {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 52%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent),
+    0 4px 18px -4px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+/* 工作区文档面。文档/制品 = 一张浮在活背景上的纸:
+   近白(暗色近黑)纸底 + r-glass 圆角 + 柔投影;工作区容器透明、纸四周留白透出
+   活背景(agent 运行时极光只环绕纸四周,不穿透正文,纸面近实色保护阅读)。 */
+.pmo-workspace-paper {
+  height: 100%;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--r-glass);
+  box-shadow: var(--shadow-paper);
+  overflow: auto;
+}
+/* 空 / 加载态:更含蓄的半透纸(仍是同一语言,不是旧灰板) */
+.pmo-workspace-paper-ghost {
+  height: 100%;
+  background: color-mix(in srgb, var(--paper) 50%, transparent);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--r-glass);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: blur(8px);
+}
+
+/* 图库 / 图片查看器 chrome —— 归队纸面/玻璃语言(替代旧 bg-surface-low 灰条 +
+   硬蓝 ring-2 选中环 + 灰按钮 + 灰底 icon 抽屉)。 */
+.pmo-gal-bar {            /* 工具条:透明 + 顶发丝分隔,浮在纸面上,不再是灰填充 */
+  border-top: 1px solid var(--paper-edge);
+}
+.pmo-gal-btn {           /* 玻璃小按钮 */
+  background: color-mix(in srgb, var(--glass-panel-bg) 66%, transparent);
+  backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: inset 0 0 0 1px var(--glass-panel-border);
+  transition: background 0.18s var(--ease-develop);
+}
+.pmo-gal-btn:hover {
+  background: color-mix(in srgb, var(--glass-panel-bg) 92%, transparent);
+}
+.pmo-gal-selected {      /* 缩略图/单元选中:柔性主色环 + 柔光(替代硬 ring-2 ring-primary) */
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 68%, transparent),
+              0 0 12px -1px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.pmo-gal-panel {         /* icon 抽屉:玻璃面板 */
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--glass-panel-border);
+  box-shadow: var(--shadow-glass);
+}
+
+/* ── 科研显影 · loading 语言(工作区加载动效,2026-07-13)────────────────
+   一套「内容从网格上生成 / 显影」的加载语言,替代通用转圈:
+   · 通用初始态(Agent 刚开工、还不知出什么)= .pmo-load-compose(内容条逐行显影)
+   · 具体产物载入 = 按类型:.pmo-load-text(逐行落笔)/ .pmo-load-image(显影浮现)/
+     .pmo-load-cv(装配成形)。全部克制、循环、跟主题。 */
+
+/* 通用:内容条逐行显影成片(中性,text-first 也贴切) */
+.pmo-load-compose { display: flex; flex-direction: column; gap: 9px; width: 190px; }
+.pmo-load-compose > i {
+  height: 9px; border-radius: 5px; opacity: 0; transform: translateX(-6px);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 34%, transparent), color-mix(in srgb, var(--primary) 12%, transparent));
+}
+.pmo-load-compose > i:nth-child(1) { width: 100%; animation: pmo-load-cwave 3s ease-in-out infinite; }
+.pmo-load-compose > i:nth-child(2) { width: 82%;  animation: pmo-load-cwave 3s ease-in-out .16s infinite; }
+.pmo-load-compose > i:nth-child(3) { width: 92%;  animation: pmo-load-cwave 3s ease-in-out .32s infinite; }
+.pmo-load-compose > i:nth-child(4) { width: 64%;  animation: pmo-load-cwave 3s ease-in-out .48s infinite; }
+.pmo-load-compose > i:nth-child(5) { width: 74%;  animation: pmo-load-cwave 3s ease-in-out .64s infinite; }
+@keyframes pmo-load-cwave { 0%,90%,100% { opacity: 0; transform: translateX(-6px); } 20%,78% { opacity: 1; transform: none; } }
+
+/* 文本 · 逐行落笔 */
+.pmo-load-text { width: 128px; display: flex; flex-direction: column; gap: 7px; }
+.pmo-load-text > i { height: 7px; border-radius: 4px; background: var(--on-surface-variant); opacity: 0; transform-origin: left; transform: scaleX(0); }
+.pmo-load-text > i:nth-child(1) { width: 100%; animation: pmo-load-type 2.6s ease-in-out infinite; }
+.pmo-load-text > i:nth-child(2) { width: 80%;  animation: pmo-load-type 2.6s ease-in-out .3s infinite; }
+.pmo-load-text > i:nth-child(3) { width: 92%;  animation: pmo-load-type 2.6s ease-in-out .6s infinite; }
+.pmo-load-text > i:nth-child(4) { width: 58%;  animation: pmo-load-type 2.6s ease-in-out .9s infinite; }
+@keyframes pmo-load-type { 0%,88%,100% { opacity: 0; transform: scaleX(0); } 14% { opacity: .85; } 26%,78% { opacity: .85; transform: scaleX(1); } }
+
+/* 图片 · 显影浮现(模糊暗 → 清亮) */
+.pmo-load-image { width: 124px; height: 84px; border-radius: 10px; overflow: hidden; border: 1px solid var(--outline-variant); }
+.pmo-load-image > i {
+  display: block; width: 100%; height: 100%;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 26%, transparent), color-mix(in srgb, var(--primary) 8%, transparent)),
+    var(--surface-container-high);
+  animation: pmo-load-develop 2.8s ease-in-out infinite;
+}
+@keyframes pmo-load-develop { 0%,92%,100% { filter: blur(8px) brightness(.6); opacity: .2; } 22%,78% { filter: blur(0) brightness(1); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pmo-load-compose > i, .pmo-load-text > i, .pmo-load-image > i { animation: none; opacity: .7; }
+}
+
+/* ============================================================
+   Glass Surface (for floating elements)
+   Light-mode glass tinted with cream, dark-mode unchanged.
+   ============================================================ */
+.glass {
+  background: rgba(246, 248, 251, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .glass {
+  background: rgba(25, 28, 34, 0.85);
+}
+
+.glass-dark {
+  background: rgba(16, 18, 24, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ============================================================
+   Editorial Shadow (large, atmospheric)
+   ============================================================ */
+.editorial-shadow {
+  box-shadow: 0 24px 40px -12px rgba(16, 18, 24, 0.05);
+}
+
+/* ============================================================
+   Glass Header (for floating toolbars)
+   ============================================================ */
+.glass-header {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ============================================================
+   Signature Gradient (primary CTA)
+   ============================================================ */
+.signature-gradient {
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+}
+
+/* ============================================================
+   No Scrollbar (clean panels)
+   ============================================================ */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================================
+   CEREMONIAL MOTION LIBRARY — Pegasus Spatial
+   ============================================================
+   Every named keyframe maps to a signature ceremony in the design spec.
+   Components opt-in via utility classes. Names retain the `pmo-` prefix
+   prefix to avoid colliding with Tailwind or any library.
+   ============================================================ */
+
+/* Easing tokens — all ceremony timing should pick one of these so the
+   product develops a consistent "rhythm signature" rather than random easings.
+   Callers use via: transition-timing-function: var(--ease-spring); */
+:root {
+  /* Spring with mild overshoot — buttons, hover bounces, focus reactions */
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Fluid spring — modals, larger surfaces, panel transitions */
+  --ease-fluid:    cubic-bezier(0.22, 1, 0.36, 1);
+  /* Calm exit — fade-out transitions, dismissals */
+  --ease-exit:     cubic-bezier(0.4, 0, 0.2, 1);
+  /* Slow reveal — content entering with "developing" quality */
+  --ease-develop:  cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Registered angle prop — drives the loop-card edge-light orbit (光态心跳).
+   Needs @property so the conic-gradient angle can be animated smoothly. */
+@property --pmo-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ------------------------------------------------------------
+   1. Primary-button shimmer — a soft cream beam that sweeps
+   diagonally across primary-filled buttons on hover/click.
+   Apply class "pmo-shimmer" to an absolutely-positioned overlay
+   inside a primary button; parent must be relative + overflow-hidden.
+   ------------------------------------------------------------ */
+@keyframes pmo-shimmer-sweep {
+  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  25%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+}
+
+.pmo-shimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(246, 248, 251, 0.42) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%) skewX(-18deg);
+  opacity: 0;
+}
+
+.pmo-shimmer-fire {
+  animation: pmo-shimmer-sweep 0.85s var(--ease-fluid) forwards;
+}
+
+/* Auto-shimmer every 5s for showcase components (hero CTA etc.) */
+.pmo-shimmer-idle {
+  animation: pmo-shimmer-sweep 0.85s var(--ease-fluid) 3s infinite;
+}
+
+/* ------------------------------------------------------------
+   2. Pulse-record — AI message "being recorded" ceremony.
+   Target element scales slightly + gets a soft primary halo
+   once, when generation completes.
+   ------------------------------------------------------------ */
+@keyframes pmo-pulse-record {
+  0%   { transform: scale(1);     box-shadow: 0 0 0 0 transparent; }
+  35%  { transform: scale(1.015); box-shadow: 0 0 0 8px color-mix(in srgb, var(--primary) 18%, transparent); }
+  100% { transform: scale(1);     box-shadow: 0 0 0 0 transparent; }
+}
+
+.pmo-pulse-record {
+  animation: pmo-pulse-record 0.7s var(--ease-fluid) forwards;
+}
+
+/* Fail variant — red halo pulse when a run ends in failure / interruption. */
+@keyframes pmo-pulse-record-fail {
+  0%   { transform: scale(1);     box-shadow: 0 0 0 0  color-mix(in srgb, var(--error) 0%, transparent); }
+  35%  { transform: scale(1.012); box-shadow: 0 0 0 8px color-mix(in srgb, var(--error) 22%, transparent); }
+  100% { transform: scale(1);     box-shadow: 0 0 0 0  transparent; }
+}
+
+/* ------------------------------------------------------------
+   3. Record-underline — a 2px primary line draws from left to
+   ~60% width under a completed AI message, then fades.
+   Intended for ::after pseudo-elements sized 100% width, 2px height.
+   ------------------------------------------------------------ */
+@keyframes pmo-record-underline {
+  0%   { transform: scaleX(0);   opacity: 0; }
+  25%  { opacity: 1; }
+  70%  { transform: scaleX(0.6); opacity: 1; }
+  100% { transform: scaleX(0.6); opacity: 0.55; }
+}
+
+.pmo-record-underline {
+  position: relative;
+}
+.pmo-record-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 100%;
+  height: 2px;
+  background: var(--primary);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  opacity: 0;
+}
+.pmo-record-underline.pmo-fire::after {
+  animation: pmo-record-underline 0.8s var(--ease-develop) forwards;
+}
+
+/* ------------------------------------------------------------
+   4. Crystallize — Hero title text forms from loose
+   low-weight to solid high-weight with slight letter-spacing
+   tightening. Requires variable font (Manrope loaded as variable).
+   Use in JS with requestAnimationFrame to interpolate CSS custom
+   properties; this class sets the animation endpoints.
+   ------------------------------------------------------------ */
+.pmo-crystallize {
+  font-variation-settings: "wght" var(--crystallize-wght, 700);
+  letter-spacing: var(--crystallize-lsp, -0.03em);
+  opacity: var(--crystallize-opacity, 1);
+  transition:
+    font-variation-settings 0.9s var(--ease-develop),
+    letter-spacing          0.9s var(--ease-develop),
+    opacity                 0.5s var(--ease-develop);
+}
+
+/* Initial state before JS triggers crystallization */
+.pmo-crystallize-seed {
+  --crystallize-wght: 200;
+  --crystallize-lsp: 0.04em;
+  --crystallize-opacity: 0.4;
+}
+
+/* Final state after JS triggers — set via requestAnimationFrame
+   removing the `seed` class; element then transitions smoothly. */
+
+/* ------------------------------------------------------------
+   5. Book-sweep — on "new project" click, a thin primary beam
+   sweeps across the workspace like turning to a fresh page.
+   Fixed-position overlay, triggered by toggling a class on body.
+   ------------------------------------------------------------ */
+@keyframes pmo-book-sweep {
+  0%   { transform: translateX(100%); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateX(-100%); opacity: 0; }
+}
+
+.pmo-book-sweep-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(
+    to left,
+    transparent 48%,
+    color-mix(in srgb, var(--primary) 22%, transparent) 50%,
+    transparent 52%
+  );
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.pmo-book-sweep-overlay.pmo-fire {
+  animation: pmo-book-sweep 1.2s var(--ease-fluid) forwards;
+}
+
+/* ------------------------------------------------------------
+   6. Stagger reveal — apply to a container to cascade children in.
+   Each child uses --i for its index via inline style: style={{'--i': 0}}.
+   Children fade + translateY + slight scale from origin.
+   ------------------------------------------------------------ */
+@keyframes pmo-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pmo-stagger > * {
+  opacity: 0;
+  animation: pmo-stagger-in 0.55s var(--ease-develop) forwards;
+  animation-delay: calc(var(--i, 0) * 60ms + 100ms);
+}
+
+/* ------------------------------------------------------------
+   Account memory · living field
+   A restrained, data-bearing motion system for the memory center.
+   The movement explains proximity (profile / history / candidates)
+   rather than acting as a decorative loading animation.
+   ------------------------------------------------------------ */
+.pmo-memory-field {
+  position: relative;
+  min-height: 342px;
+  margin: 0 22px 8px;
+  isolation: isolate;
+}
+
+.pmo-memory-orbit {
+  position: absolute;
+  left: 50%;
+  top: 51%;
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
+  border-radius: var(--r-pill);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.pmo-memory-orbit::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 45%, transparent);
+  opacity: .46;
+}
+
+.pmo-memory-orbit-a {
+  width: 53%;
+  height: 53%;
+  animation: pmo-memory-orbit-drift 13s ease-in-out infinite;
+}
+
+.pmo-memory-orbit-b {
+  width: 72%;
+  height: 76%;
+  opacity: .72;
+  animation: pmo-memory-orbit-drift 17s ease-in-out -5s infinite reverse;
+}
+
+.pmo-memory-orbit-c {
+  width: 91%;
+  height: 94%;
+  opacity: .34;
+  animation: pmo-memory-orbit-drift 21s ease-in-out -9s infinite;
+}
+
+.pmo-memory-core {
+  position: absolute;
+  left: 50%;
+  top: 51%;
+  z-index: 3;
+  display: flex;
+  width: 112px;
+  height: 112px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  border-radius: var(--r-pill);
+  background: var(--glass-panel-bg);
+  box-shadow:
+    0 18px 48px -24px color-mix(in srgb, var(--primary) 60%, transparent),
+    inset 0 1px 0 var(--glass-panel-border),
+    0 0 0 12px color-mix(in srgb, var(--primary) 5%, transparent);
+  color: var(--on-surface);
+  transform: translate(-50%, -50%);
+  animation: pmo-memory-core-breathe 7s ease-in-out infinite;
+}
+
+.pmo-memory-core span,
+.pmo-memory-core small {
+  color: var(--secondary-text);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.pmo-memory-core strong {
+  margin: 4px 0 2px;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pmo-memory-node {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 8px auto;
+  column-gap: 8px;
+  align-items: center;
+  min-width: 116px;
+  padding: 9px 11px;
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--r-card);
+  background: var(--glass-panel-bg);
+  box-shadow: var(--shadow-ambient);
+  color: var(--secondary-text);
+  text-align: left;
+  backdrop-filter: blur(14px) saturate(1.35);
+  transition:
+    transform .35s var(--ease-spring),
+    box-shadow .35s var(--ease-fluid),
+    color .25s var(--ease-exit);
+  animation: pmo-memory-node-float 7.5s ease-in-out infinite;
+}
+
+button.pmo-memory-node:hover {
+  color: var(--on-surface);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.pmo-memory-node > i {
+  grid-row: 1 / span 2;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 38%, transparent);
+}
+
+.pmo-memory-node span {
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.pmo-memory-node strong {
+  color: var(--on-surface);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.pmo-memory-node.node-profile { left: 3%; top: 14%; animation-delay: -1.7s; }
+.pmo-memory-node.node-history { right: 2%; top: 16%; animation-delay: -4.2s; }
+.pmo-memory-node.node-candidate { right: 5%; bottom: 12%; animation-delay: -2.8s; }
+.pmo-memory-node.node-capacity { left: 5%; bottom: 11%; animation-delay: -5.3s; }
+
+.pmo-memory-particle {
+  position: absolute;
+  z-index: 2;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 42%, transparent);
+  opacity: .28;
+  animation: pmo-memory-particle-float 6s ease-in-out infinite;
+}
+
+.pmo-memory-particle.p1 { left: 25%; top: 29%; animation-delay: -1s; }
+.pmo-memory-particle.p2 { left: 73%; top: 34%; animation-delay: -3s; }
+.pmo-memory-particle.p3 { left: 30%; top: 70%; animation-delay: -4.7s; }
+.pmo-memory-particle.p4 { left: 65%; top: 75%; animation-delay: -2.1s; }
+.pmo-memory-particle.p5 { left: 50%; top: 14%; animation-delay: -5.2s; }
+
+.pmo-memory-section {
+  animation: pmo-memory-section-in .62s var(--ease-develop) both;
+}
+
+.pmo-memory-dialog {
+  animation: pmo-memory-dialog-in .42s var(--ease-fluid) both;
+}
+
+.pmo-memory-empty-mark {
+  position: relative;
+  width: 76px;
+  height: 54px;
+  margin: 0 auto;
+}
+
+.pmo-memory-empty-mark::before,
+.pmo-memory-empty-mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  border-radius: var(--r-pill);
+  transform: translate(-50%, -50%);
+}
+.pmo-memory-empty-mark::before { width: 76px; height: 40px; }
+.pmo-memory-empty-mark::after { width: 45px; height: 45px; }
+.pmo-memory-empty-mark i {
+  position: absolute;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 35%, transparent);
+  opacity: .42;
+  animation: pmo-memory-particle-float 5.5s ease-in-out infinite;
+}
+.pmo-memory-empty-mark i:nth-child(1) { left: 4px; top: 23px; }
+.pmo-memory-empty-mark i:nth-child(2) { left: 35px; top: 2px; animation-delay: -1.4s; }
+.pmo-memory-empty-mark i:nth-child(3) { right: 3px; top: 24px; animation-delay: -2.8s; }
+.pmo-memory-empty-mark i:nth-child(4) { left: 35px; bottom: 1px; animation-delay: -4.1s; }
+
+@keyframes pmo-memory-orbit-drift {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-2deg) scale(1); }
+  50% { transform: translate(-50%, -50%) rotate(3deg) scale(1.025); }
+}
+
+@keyframes pmo-memory-core-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.035); }
+}
+
+@keyframes pmo-memory-node-float {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: -5px; }
+}
+
+@keyframes pmo-memory-particle-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(.8); opacity: .22; }
+  50% { transform: translate3d(0, -7px, 0) scale(1.15); opacity: .55; }
+}
+
+@keyframes pmo-memory-section-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pmo-memory-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 640px) {
+  .pmo-memory-field { min-height: 390px; margin-inline: 12px; }
+  .pmo-memory-orbit-a { width: 58%; height: 48%; }
+  .pmo-memory-orbit-b { width: 82%; height: 70%; }
+  .pmo-memory-orbit-c { width: 98%; height: 88%; }
+  .pmo-memory-node { min-width: 104px; padding: 8px 9px; }
+  .pmo-memory-node.node-profile { left: 0; top: 12%; }
+  .pmo-memory-node.node-history { right: 0; top: 17%; }
+  .pmo-memory-node.node-candidate { right: 0; bottom: 10%; }
+  .pmo-memory-node.node-capacity { left: 0; bottom: 13%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmo-memory-orbit,
+  .pmo-memory-core,
+  .pmo-memory-node,
+  .pmo-memory-particle,
+  .pmo-memory-empty-mark i,
+  .pmo-memory-section,
+  .pmo-memory-dialog {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   7. Sweep-hover — on hover over a sidebar item, a 2px primary
+   line sweeps down the left edge once (not persistent). Element
+   provides its own ::before positioned absolutely left:0,top:0,
+   width:2px, height:100%.
+   ------------------------------------------------------------ */
+@keyframes pmo-sweep-hover-down {
+  0%   { transform: scaleY(0); transform-origin: 0 0;    opacity: 0; }
+  30%  { opacity: 1; }
+  60%  { transform: scaleY(1); transform-origin: 0 0;    opacity: 1; }
+  61%  {                        transform-origin: 0 100%; }
+  100% { transform: scaleY(0); transform-origin: 0 100%; opacity: 0; }
+}
+
+.pmo-sweep-hover {
+  position: relative;
+}
+.pmo-sweep-hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--primary);
+  transform: scaleY(0);
+  transform-origin: 0 0;
+  opacity: 0;
+}
+.pmo-sweep-hover:hover::before {
+  animation: pmo-sweep-hover-down 0.9s var(--ease-develop);
+}
+
+/* ------------------------------------------------------------
+   8. Focus-expand — on input focus, a 1px primary line expands
+   from center to edges along the bottom of the input like a
+   microphone being turned on.
+   ------------------------------------------------------------ */
+.pmo-focus-expand {
+  position: relative;
+}
+.pmo-focus-expand::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: 50%;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--primary);
+  border-radius: 2px;
+  transition:
+    left 0.4s var(--ease-develop),
+    right 0.4s var(--ease-develop),
+    opacity 0.3s var(--ease-develop);
+  opacity: 0.6;
+}
+.pmo-focus-expand:focus-within::after {
+  left: 0;
+  right: 0;
+  opacity: 1;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* ------------------------------------------------------------
+   9. Authority primary — text inline styling for citations,
+   numbers, model names, and key terms in AI output.
+   Use via <span className="pmo-authority">…</span>.
+   ------------------------------------------------------------ */
+.pmo-authority {
+  color: var(--primary);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-feature-settings: "tnum";
+  font-variation-settings: "wght" 500;
+}
+
+.pmo-authority-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  min-height: 18px;
+  border-radius: var(--r-ctrl);
+  background: var(--primary-tint-weak);
+  color: var(--primary);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.75em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  vertical-align: 0.1em;
+}
+
+/* ------------------------------------------------------------
+   10. Primary-filled button — the canonical action button. Use
+   instead of custom gradients for Send / New Project / 开始创作.
+   ------------------------------------------------------------ */
+.pmo-btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: var(--primary);
+  color: var(--on-primary);
+  transition:
+    background 0.22s var(--ease-spring),
+    transform  0.22s var(--ease-spring),
+    box-shadow 0.22s var(--ease-spring);
+  box-shadow: 0 1px 2px rgba(16,18,24,0.08);
+}
+
+.pmo-btn-primary:hover:not(:disabled) {
+  background: var(--primary-deep);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(63, 86, 138, 0.24),
+              0 0 0 6px rgba(93, 119, 173, 0.10);
+}
+
+.pmo-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(16,18,24,0.08);
+}
+
+.pmo-btn-primary:disabled {
+  background: var(--surface-container-high);
+  color: var(--secondary-text);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------
+   11. Dot-breathe — a primary-tinted glowing dot that gently
+   pulses in-place while an AI message is actively streaming.
+   Intended as a trailing generation indicator inside AI bubbles.
+   ------------------------------------------------------------ */
+@keyframes pmo-dot-breathe {
+  0%, 100% { transform: scale(1);   opacity: 0.9; }
+  50%      { transform: scale(1.3); opacity: 1;   }
+}
+
+/* ------------------------------------------------------------
+   12. Fly-ghost — send-ceremony floating clone of the user's
+   text. Created by ChatInput.handleSend at the textarea's rect
+   and animated via Web Animation API to land on the new
+   MessageBubble. Long messages truncated to 200 chars + "…" by
+   the JS handler. Pointer-events: none so it never intercepts
+   clicks during the 520ms flight.
+   ------------------------------------------------------------ */
+.pmo-fly-ghost {
+  position: fixed;
+  font-family: var(--font-manrope), var(--font-noto-sc), Manrope, system-ui, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  font-variation-settings: 'wght' 400;
+  background: transparent;
+  max-width: 680px;
+  pointer-events: none;
+  z-index: 100;
+  white-space: pre-wrap;
+  word-break: break-word;
+  will-change: transform, opacity;
+}
+
+/* ============================================================
+   END · Ceremonial Motion Library
+   ============================================================ */
+
+/* ============================================================
+   Pegasus Spatial · Editorial Timeline
+   ============================================================
+   The conversation area renders as a typographic editorial stream
+   (no avatars, no bubble on user messages, no dots, no connecting
+   line). Rhythm comes from spacing and type contrast alone.
+
+   Three rendering paths:
+     · .pmo-msg-user       — plain, no container
+     · .pmo-msg-ai         — loop process, wraps narration + tool
+                              calls in .pmo-bubble
+     · .pmo-msg-ai-final   — final natural-language answer, plain
+                              (mirrors user structure)
+
+   All class names carry `pmo-` prefix to avoid collisions.
+   ============================================================ */
+
+/* --- Shared: meta row + message shell --- */
+.pmo-msg {
+  max-width: 680px;
+  margin-bottom: 32px;
+}
+.pmo-msg:last-child { margin-bottom: 0; }
+
+.pmo-msg-meta {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--secondary-text);
+  margin-bottom: 10px;
+}
+.pmo-msg-meta .pmo-time {
+  color: var(--outline-variant);
+  margin-left: 10px;
+}
+.pmo-msg-meta .pmo-generating {
+  margin-left: 12px;
+  color: var(--primary);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  transition: opacity 0.4s var(--ease-develop);
+}
+.pmo-msg-ai.completed .pmo-msg-meta .pmo-generating {
+  opacity: 0;
+  pointer-events: none;
+}
+/* Completion badge — replaces GENERATING once the run settles.
+   Success = 已记录 (success green); failure/interruption = 已中断 (error red). */
+.pmo-msg-meta .pmo-completed-badge {
+  margin-left: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--success);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-develop);
+}
+.pmo-msg-ai.completed .pmo-msg-meta .pmo-completed-badge { opacity: 0.85; }
+.pmo-msg-meta .pmo-completed-badge.pmo-badge-fail { color: var(--error); }
+
+/* --- Message body — PRIMARY voice (user questions + final AI replies) ---
+   Foreground: ink color, regular weight, 13.5px. These are the
+   "real dialogue"; the bubble contents are visually subordinate to them. */
+.pmo-msg-body {
+  font-size: 13.5px;
+  line-height: 1.7;
+  letter-spacing: 0.002em;
+  color: var(--on-surface);
+  font-variation-settings: "wght" 420;
+}
+.pmo-msg-body-user {
+  color: var(--on-surface-variant);
+  white-space: pre-wrap;
+}
+
+/* --- Final AI response body (plain, ink primary) --- */
+.pmo-msg-ai-final .pmo-msg-body {
+  color: var(--on-surface);
+}
+.pmo-msg-ai-final .pmo-msg-body p {
+  margin: 0 0 14px 0;
+}
+.pmo-msg-ai-final .pmo-msg-body p:last-child {
+  margin-bottom: 0;
+}
+.pmo-msg-ai-final .pmo-msg-body ul,
+.pmo-msg-ai-final .pmo-msg-body ol {
+  list-style: none;
+  padding: 0 0 0 18px;
+  margin: 0 0 14px 0;
+}
+.pmo-msg-ai-final .pmo-msg-body ul li,
+.pmo-msg-ai-final .pmo-msg-body ol li {
+  position: relative;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--on-surface-variant);
+  padding-left: 2px;
+}
+.pmo-msg-ai-final .pmo-msg-body ul li::before {
+  content: '·';
+  position: absolute;
+  left: -14px;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  top: 6px;
+}
+.pmo-msg-ai-final .pmo-msg-body strong {
+  color: var(--on-surface);
+  font-variation-settings: 'wght' 600;
+}
+
+/* --- AI process bubble (wraps narration + tool calls) --- */
+.pmo-bubble {
+  position: relative;
+  /* 玻璃岛(W3b · §1.4):半透玻璃底 + backdrop blur,活背景的柔光斑从卡下
+   * 透出;1px 硬发丝边 → 极淡玻璃边;深度由 --shadow-glass(贴地薄影 +
+   * 大扩散柔影 + 顶部内高光)承担。与 input-shell 共用同一套 token,
+   * 「同一块玻璃切出来」。文字密集面,底 = --glass-panel-bg 可读性护栏值。 */
+  background: var(--glass-panel-bg);
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--r-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-glass);
+  overflow: hidden; /* edge-light (.pmo-edge-rest) bleeds inward as “light from inside the glass” */
+  /* Inherits the .pmo-msg max-width (680) — don't set another max-width
+     here or the column axis breaks. */
+}
+
+/* Indeterminate slide — still used by components/loading/TopProgressBar.tsx
+   (top route-progress bar). The bubble's own progress stripe was replaced by
+   the 光态 edge-light heartbeat below, but this keyframe stays for that consumer. */
+@keyframes pmo-prog-slide {
+  0%   { left: -30%; }
+  100% { left: 100%; }
+}
+
+/* ── Loop 卡 · 光态编排(方案 C)──────────────────────────────
+   进度/完成用「光」表达,取代旧「1px 滑动进度条」+「墨线生长」:
+   · 心跳     = 边缘柔光巡游(.pmo-edge-travel,generating 时 orbit,不指涉内容的恒定信号)
+   · 完成绽放 = 一次柔散 bloom(.pmo-complete-fire,仅「流式→完成」实时转场触发;
+                历史卡挂载时不触发,避免整屏 bloom)
+   · 持久留痕 = 收敛成一侧极淡边光(.pmo-edge-rest,.completed 常驻,静止可辨,替代旧墨线)
+   成功 = 主色蓝;失败 / 中断(.pmo-fail)= --error 红,整套收束改红光。
+   edge 层 z-index:0 落在玻璃底之上、内容(.pmo-bubble-body z-index:1)之下;
+   .pmo-bubble overflow:hidden 让越界的边光内溢成「玻璃里的光」。 */
+.pmo-edge {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.pmo-bubble-body {
+  position: relative;
+  z-index: 1;
+}
+
+/* 心跳:边缘柔光巡游(玻璃原生行进光) */
+.pmo-edge-travel {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: conic-gradient(from var(--pmo-angle),
+    transparent 0deg, transparent 288deg,
+    color-mix(in srgb, var(--primary) 10%, transparent) 306deg,
+    var(--primary) 336deg,
+    color-mix(in srgb, var(--primary) 55%, #e6eefb) 348deg,
+    var(--primary) 356deg,
+    transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  filter: blur(0.5px);
+  opacity: 0;
+  transition: opacity 0.8s var(--ease-fluid);
+}
+.pmo-edge-halo {
+  padding: 2px;
+  filter: blur(6px);
+  background: conic-gradient(from var(--pmo-angle),
+    transparent 0deg, transparent 300deg,
+    color-mix(in srgb, var(--primary) 35%, transparent) 336deg,
+    color-mix(in srgb, var(--primary) 62%, #e6eefb) 348deg,
+    color-mix(in srgb, var(--primary) 35%, transparent) 356deg,
+    transparent 360deg);
+}
+.pmo-msg-ai.generating .pmo-edge-travel { opacity: 1; animation: pmo-edge-orbit 3.6s linear infinite; }
+.pmo-msg-ai.generating .pmo-edge-halo { opacity: 0.85; }
+@keyframes pmo-edge-orbit { to { --pmo-angle: 360deg; } }
+
+/* 完成绽放:一次柔散 bloom(真·柔散,非零模糊硬环) */
+.pmo-edge-bloom {
+  position: absolute;
+  inset: -6%;
+  border-radius: inherit;
+  background: radial-gradient(120% 90% at 8% 50%,
+    color-mix(in srgb, var(--primary) 42%, transparent),
+    color-mix(in srgb, var(--primary) 12%, transparent) 42%, transparent 66%);
+  filter: blur(14px);
+  opacity: 0;
+}
+.pmo-complete-fire .pmo-edge-bloom { animation: pmo-edge-bloom 1.15s var(--ease-develop) forwards; }
+.pmo-complete-fire.pmo-fail .pmo-edge-bloom {
+  background: radial-gradient(120% 90% at 8% 50%,
+    color-mix(in srgb, var(--error) 44%, transparent),
+    color-mix(in srgb, var(--error) 12%, transparent) 42%, transparent 66%);
+}
+@keyframes pmo-edge-bloom {
+  0%   { opacity: 0; transform: scale(0.985); }
+  26%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+/* 持久留痕:完成后收敛成一侧极淡边光(静止可辨) */
+.pmo-edge-rest {
+  position: absolute;
+  left: -1px;
+  top: 10%;
+  bottom: 10%;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, transparent, var(--primary) 22%, color-mix(in srgb, var(--primary) 60%, #e6eefb) 50%, var(--primary) 78%, transparent);
+  filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.9s var(--ease-develop);
+}
+.pmo-edge-rest-wide {
+  left: -8px;
+  width: 16px;
+  filter: blur(11px);
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--primary) 50%, transparent) 40%, color-mix(in srgb, var(--primary) 50%, transparent) 60%, transparent);
+}
+.pmo-msg-ai.completed .pmo-edge-rest { opacity: 0.95; }
+.pmo-msg-ai.completed .pmo-edge-rest-wide { opacity: 0.6; }
+.pmo-msg-ai.completed.pmo-fail .pmo-edge-rest {
+  background: linear-gradient(180deg, transparent, var(--error) 22%, color-mix(in srgb, var(--error) 60%, #f6dedb) 50%, var(--error) 78%, transparent);
+}
+.pmo-msg-ai.completed.pmo-fail .pmo-edge-rest-wide {
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--error) 50%, transparent) 40%, color-mix(in srgb, var(--error) 50%, transparent) 60%, transparent);
+}
+
+/* 完成收束脉冲(一次;仅实时转场触发)。成功 = 蓝晕,失败 = 红晕。 */
+.pmo-complete-fire { animation: pmo-pulse-record 0.7s var(--ease-fluid) forwards; }
+.pmo-complete-fire.pmo-fail { animation: pmo-pulse-record-fail 0.85s var(--ease-fluid) forwards; }
+
+/* --- Narration paragraphs inside the bubble — SECONDARY voice ---
+   This is the "loop work log" — transparency into what the AI is doing.
+   Visually subordinate to the primary dialog: one size smaller, lighter
+   weight, muted ink, and no separate max-width so the column flows with
+   the bubble. Tool-call rows (see .pmo-tool) inherit the same register. */
+.pmo-narration {
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  /* body-sm 档 + 玻璃底最低字重抬到 430(旧 360 在半透玻璃上偏虚) */
+  font-size: var(--text-body-sm);
+  line-height: 1.6;
+  letter-spacing: 0.004em;
+  color: var(--on-surface-variant);
+  font-variation-settings: "wght" 430;
+  margin: 0 0 16px 0;
+}
+.pmo-narration:last-child { margin-bottom: 0; }
+.pmo-narration.pmo-narration-first { margin-top: 4px; }
+
+/* em.n — mono numeric/term; em.k — key concept in primary */
+.pmo-narration em.n,
+.pmo-msg-body em.n {
+  font-style: normal;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 0.92em;
+  letter-spacing: 0.01em;
+  color: var(--primary);
+}
+.pmo-narration em.k,
+.pmo-msg-body em.k {
+  font-style: normal;
+  color: var(--primary);
+  font-variation-settings: 'wght' 600;
+}
+
+/* --- Tool call row (VERB · toolname [dots]) --- */
+.pmo-tool {
+  margin: 0 0 14px 0;
+  max-width: 520px;
+  position: relative;
+}
+.pmo-tool:last-child { margin-bottom: 0; }
+
+.pmo-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 18px;
+}
+
+.pmo-tool-verb {
+  position: relative;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+  font-weight: 500;
+  /* No min-width: the verb, `·`, and tool-name stay tight together so
+     each row reads flush-left without a blank column between verb and
+     separator. (Trade-off: `·` won't align vertically across rows, but
+     the visual space looked worse.) */
+  transition: color 0.5s var(--ease-develop);
+}
+.pmo-tool-verb .pres,
+.pmo-tool-verb .past {
+  display: inline-block;
+  transition: opacity 0.45s var(--ease-develop);
+}
+.pmo-tool-verb .past {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+}
+/* Loading: show pres, hide past (past is already absolute so no layout cost) */
+.pmo-tool.loading .pmo-tool-verb .pres { opacity: 1; }
+.pmo-tool.loading .pmo-tool-verb .past { opacity: 0; }
+/* Completed: show past as the in-flow text. Collapse `.pres` with
+   display:none so it takes no width — otherwise its invisible footprint
+   pushes the whole row right and every completed tool-call row looks
+   indented relative to the loading one above it. The verb also fades
+   from neutral gray to success green to give users a clear "done"
+   signal that's hard to miss as the row settles in place. */
+.pmo-tool.completed .pmo-tool-verb { color: var(--success); }
+.pmo-tool.completed .pmo-tool-verb .pres { display: none; }
+.pmo-tool.completed .pmo-tool-verb .past { opacity: 1; position: static; }
+/* Static (loads already completed from the start) — same green resolution
+   so backfilled tool calls (loaded from history) match live ones. */
+.pmo-tool.static .pmo-tool-verb { color: var(--success); }
+.pmo-tool.static .pmo-tool-verb .pres { display: none; }
+.pmo-tool.static .pmo-tool-verb .past { opacity: 1; position: static; }
+
+.pmo-tool-sep {
+  color: var(--outline-variant);
+  font-size: 12px;
+  line-height: 1;
+  transform: translateY(-1px);
+  user-select: none;
+}
+
+.pmo-tool-name {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  color: var(--primary);
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  word-break: break-all;
+}
+
+/* 光态工具行:前导 pip(状态点)+ 行尾 live(进行呼吸点)/ cap(完成光收口)。
+   pip 进行中呼吸、完成定绿 / 失败定红(色过渡,不闪,避免历史卡挂载时整屏闪);
+   live 仅进行中,cap 仅完成 / 失败,二者 margin-left:auto 抢同一右槽、互不同现。 */
+.pmo-tool-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--secondary-text);
+  transition: background 0.5s var(--ease-develop);
+}
+.pmo-tool.loading .pmo-tool-pip {
+  animation: pmo-dot-breathe-tool 1.15s var(--ease-fluid) infinite;
+}
+.pmo-tool.completed .pmo-tool-pip { background: var(--success); }
+.pmo-tool.failed .pmo-tool-pip { background: var(--error); }
+
+.pmo-tool-live {
+  margin-left: auto;
+  flex: none;
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent);
+  animation: pmo-dot-breathe-tool 1.15s var(--ease-fluid) infinite;
+}
+.pmo-tool.completed .pmo-tool-live,
+.pmo-tool.failed .pmo-tool-live { display: none; }
+
+.pmo-tool-cap {
+  margin-left: auto;
+  flex: none;
+  width: 0;
+  height: 1.6px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--success));
+  transition: width 0.5s var(--ease-develop);
+}
+.pmo-tool.loading .pmo-tool-cap { display: none; }
+.pmo-tool.completed .pmo-tool-cap { width: 18px; }
+.pmo-tool.failed .pmo-tool-cap {
+  width: 18px;
+  background: linear-gradient(90deg, transparent, var(--error));
+}
+
+@keyframes pmo-dot-breathe-tool {
+  0%, 80%, 100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+}
+
+/* Failed variant */
+.pmo-tool.failed .pmo-tool-verb { color: var(--error); }
+.pmo-tool.failed .pmo-tool-name { color: var(--error); }
+.pmo-tool-fail-reason {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--secondary-text);
+  margin-top: 8px;
+}
+.pmo-tool-fail-reason b {
+  color: var(--error);
+  font-weight: 500;
+}
+
+/* --- Citation grid (appears at end of final response) --- */
+.pmo-citations {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(16, 18, 24, 0.06);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 14px;
+}
+.pmo-citation {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--on-surface-variant);
+}
+.pmo-citation .pmo-citation-num {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+/* --- Thinking / redacted / ask_user / image / interrupted --- */
+.pmo-thinking-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 10px;
+  transition: opacity 0.25s var(--ease-develop);
+}
+.pmo-thinking-toggle:hover { opacity: 0.75; }
+.pmo-thinking-body {
+  margin: 0 0 16px 0;
+  padding: 10px 14px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--r-card);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--on-surface-variant);
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pmo-redacted {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--secondary-text);
+  margin: 0 0 14px 0;
+}
+
+.pmo-inline-image {
+  display: block;
+  margin: 0 0 16px 0;
+  max-height: 240px;
+  max-width: 100%;
+  border-radius: var(--r-card);
+  object-fit: contain;
+  box-shadow: var(--shadow-ambient);
+}
+
+/* Raster loading: keep the final image invisible until decode() completes.
+   A quiet focus mark holds the exact frame; no low-resolution preview or
+   progressive scanline is ever exposed to the user. */
+.pmo-progressive-image {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  container-type: inline-size;
+  background: var(--surface-container-lowest);
+}
+.pmo-progressive-image-loader,
+.pmo-progressive-image-final,
+.pmo-progressive-image-error {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pmo-progressive-image[data-image-fit='contain'] .pmo-progressive-image-final {
+  object-fit: contain;
+  object-position: 50% 50%;
+}
+.pmo-progressive-image[data-image-fit='cover'] .pmo-progressive-image-final {
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+.pmo-progressive-image-loader {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(color-mix(in srgb, var(--primary) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 3%, transparent) 1px, transparent 1px),
+    var(--surface-container-lowest);
+  background-size: 42px 42px, 42px 42px, auto;
+  transition: opacity 140ms linear;
+}
+.pmo-progressive-image-loader-composition {
+  position: relative;
+  width: 184px;
+  height: 128px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 18px 28px color-mix(in srgb, var(--primary) 12%, transparent));
+}
+.pmo-progressive-image-loader-frame {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 5px;
+  width: 156px;
+  height: 100px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--outline-variant));
+  border-radius: 12px;
+  background: var(--surface-container-lowest);
+  box-shadow:
+    0 12px 34px color-mix(in srgb, var(--ink) 8%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, white 70%, transparent);
+  animation: pmo-media-frame-float 2.4s ease-in-out infinite;
+}
+.pmo-progressive-image-loader-frame i {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--primary) 68%, var(--surface-container-lowest));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+  animation: pmo-media-cell-assemble 1.8s ease-in-out infinite;
+  animation-delay: var(--cell-delay);
+}
+.pmo-progressive-image-loader-frame i[data-cell='a'] {
+  --cell-x: -12px; --cell-y: -7px; --cell-delay: -1.55s;
+  grid-column: 1 / 4; grid-row: 1;
+}
+.pmo-progressive-image-loader-frame i[data-cell='b'] {
+  --cell-x: 13px; --cell-y: -8px; --cell-delay: -1.3s;
+  grid-column: 4 / 7; grid-row: 1;
+  background: color-mix(in srgb, var(--primary) 28%, var(--surface-container-lowest));
+}
+.pmo-progressive-image-loader-frame i[data-cell='c'] {
+  --cell-x: -14px; --cell-y: 8px; --cell-delay: -1.05s;
+  grid-column: 1 / 3; grid-row: 2 / 5;
+  background: color-mix(in srgb, var(--primary) 42%, var(--surface-container-lowest));
+}
+.pmo-progressive-image-loader-frame i[data-cell='d'] {
+  --cell-x: 0; --cell-y: 11px; --cell-delay: -0.8s;
+  grid-column: 3 / 6; grid-row: 2 / 4;
+  background: color-mix(in srgb, var(--primary) 82%, var(--surface-container-lowest));
+}
+.pmo-progressive-image-loader-frame i[data-cell='e'] {
+  --cell-x: 15px; --cell-y: 5px; --cell-delay: -0.55s;
+  grid-column: 6; grid-row: 2 / 5;
+  background: color-mix(in srgb, var(--primary) 50%, var(--surface-container-lowest));
+}
+.pmo-progressive-image-loader-frame i[data-cell='f'] {
+  --cell-x: -5px; --cell-y: 13px; --cell-delay: -0.3s;
+  grid-column: 3 / 5; grid-row: 4;
+  background: color-mix(in srgb, var(--primary) 24%, var(--surface-container-lowest));
+}
+.pmo-progressive-image-loader-frame i[data-cell='g'] {
+  --cell-x: 8px; --cell-y: 13px; --cell-delay: -0.05s;
+  grid-column: 5 / 6; grid-row: 4;
+  background: color-mix(in srgb, var(--primary) 60%, var(--surface-container-lowest));
+}
+.pmo-progressive-image-loader-focus {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  border-radius: 17px;
+  animation: pmo-media-focus-frame 1.8s ease-in-out infinite;
+}
+.pmo-progressive-image[data-image-state='decoding'] .pmo-progressive-image-loader-frame i,
+.pmo-progressive-image[data-image-state='decoding'] .pmo-progressive-image-loader-focus {
+  animation-duration: 0.82s;
+}
+.pmo-progressive-image-final {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 120ms var(--ease-develop);
+}
+.pmo-progressive-image[data-image-state='ready'] .pmo-progressive-image-final {
+  opacity: 1;
+}
+.pmo-progressive-image[data-image-state='ready'] .pmo-progressive-image-loader,
+.pmo-progressive-image[data-image-state='error'] .pmo-progressive-image-loader {
+  opacity: 0;
+  pointer-events: none;
+}
+.pmo-progressive-image-error {
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  color: var(--secondary-text);
+  background: var(--surface-container-low);
+}
+.pmo-progressive-image-error svg {
+  width: 28px;
+  height: 28px;
+  fill: currentColor;
+  opacity: 0.55;
+}
+@keyframes pmo-media-cell-assemble {
+  0%, 100% {
+    opacity: 0.18;
+    transform: translate(var(--cell-x), var(--cell-y)) scale(0.82);
+  }
+  32%, 72% {
+    opacity: 0.92;
+    transform: translate(0, 0) scale(1);
+  }
+}
+@keyframes pmo-media-frame-float {
+  0%, 100% { transform: translateY(2px) rotate(-0.25deg); }
+  50% { transform: translateY(-2px) rotate(0.25deg); }
+}
+@keyframes pmo-media-focus-frame {
+  0%, 100% { opacity: 0.18; transform: scale(0.92); }
+  50% { opacity: 0.72; transform: scale(1.04); }
+}
+@container (max-width: 220px) {
+  .pmo-progressive-image-loader-composition {
+    width: 62px;
+    height: 48px;
+    filter: drop-shadow(0 7px 12px color-mix(in srgb, var(--primary) 11%, transparent));
+  }
+  .pmo-progressive-image-loader-frame {
+    width: 54px;
+    height: 38px;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .pmo-progressive-image-loader-focus {
+    inset: 0;
+    border-radius: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmo-progressive-image-loader-frame,
+  .pmo-progressive-image-loader-frame i,
+  .pmo-progressive-image-loader-focus { animation: none; }
+  .pmo-progressive-image-final { transition: none; }
+}
+
+.pmo-inline-image-frame {
+  display: flex;
+  width: min(100%, 420px);
+  min-height: 180px;
+  margin: 0 0 16px 0;
+  border-radius: var(--r-card);
+}
+.pmo-inline-image-frame .pmo-inline-image { margin: 0; }
+
+.pmo-interrupted {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.pmo-interrupted .pmo-interrupted-rule {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+.pmo-interrupted .pmo-interrupted-label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warning);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pmo-ask-user {
+  margin: 0 0 18px 0;
+  padding: 14px 16px;
+  border-radius: var(--r-card);
+  background: var(--primary-tint-weak);
+}
+.pmo-ask-user .pmo-ask-user-q {
+  font-size: 14px;
+  color: var(--on-surface);
+  font-variation-settings: 'wght' 500;
+  margin-bottom: 10px;
+}
+.pmo-ask-user .pmo-ask-user-opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 12.5px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: var(--r-ctrl);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface-variant);
+  border: none;
+  cursor: pointer;
+  transition: background 0.22s var(--ease-develop), color 0.22s var(--ease-develop);
+}
+.pmo-ask-user .pmo-ask-user-opt:hover {
+  background: var(--surface);
+  color: var(--on-surface);
+}
+.pmo-ask-user .pmo-ask-user-opt:last-child { margin-bottom: 0; }
+.pmo-ask-user-answered {
+  font-size: 12px;
+  color: var(--secondary-text);
+  margin-top: 6px;
+}
+
+/* --- Waiting fallback (empty assistant, streaming) --- */
+.pmo-waiting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--secondary-text);
+}
+.pmo-waiting .pmo-waiting-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.pmo-waiting .pmo-waiting-dots span {
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent);
+  animation: pmo-dot-breathe-tool 1.15s var(--ease-fluid) infinite;
+}
+.pmo-waiting .pmo-waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+.pmo-waiting .pmo-waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* --- User-uploaded image attachments --- */
+.pmo-user-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pmo-user-images img {
+  max-height: 180px;
+  max-width: 280px;
+  border-radius: var(--r-card);
+  object-fit: contain;
+  box-shadow: var(--shadow-ambient);
+}
+.pmo-user-image-frame {
+  width: min(280px, 100%);
+  min-height: 120px;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-ambient);
+}
+.pmo-user-image-frame img {
+  width: 100%;
+  height: 100%;
+}
+
+/* ==========================================================
+   SCI-PEGASUS · EDITORIAL SHELL
+   Region 2-5 classes — mirrors demo-C3 / demo-C5 exactly.
+   ========================================================== */
+
+/* --- Region 2 · INPUT META FOOTER (kbd hints + token count) --- */
+.pmo-input-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  margin-top: 10px;
+  letter-spacing: 0.04em;
+}
+.pmo-input-meta .pmo-kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--surface);
+  border-radius: 2px;
+  color: var(--ink-muted);
+  font-family: inherit;
+  margin: 0 1px;
+}
+.pmo-input-meta .pmo-tokens b {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* --- Region 3 · HERO editorial ceremony (TaskWorkbench left column) --- */
+.pmo-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.pmo-hero h1 {
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 72px;
+  line-height: 0.95;
+  color: var(--primary);
+  margin-bottom: 18px;
+  /* font-variation-settings + letter-spacing are controlled by
+     .pmo-crystallize / .pmo-crystallize-seed state classes so the
+     crystallize ceremony can animate them. */
+}
+.pmo-hero .pmo-hero-subtitle {
+  font-size: 15px;
+  color: var(--ink-muted);
+  font-variation-settings: 'wght' 400;
+  letter-spacing: 0.005em;
+  max-width: 520px;
+  line-height: 1.5;
+}
+.pmo-hero .pmo-hero-subtitle b {
+  color: var(--primary);
+  font-variation-settings: 'wght' 600;
+  letter-spacing: 0.002em;
+}
+.pmo-hero .pmo-hero-meta {
+  display: flex;
+  gap: 28px;
+  margin-top: 28px;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  letter-spacing: 0.06em;
+}
+.pmo-hero .pmo-hero-meta span b {
+  color: var(--ink-secondary);
+  font-weight: 400;
+  margin-right: 6px;
+}
+
+/* --- Region 4 · SIDEBAR editorial project list --- */
+.pmo-sidebar-section-title {
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-variation-settings: 'wght' 500;
+  padding: 0 4px 10px;
+}
+.pmo-project {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px;
+  font-size: 13px;
+  color: var(--ink-secondary);
+  border-radius: var(--r-card);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s var(--ease-develop), background 0.3s var(--ease-develop);
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  letter-spacing: -0.003em;
+}
+.pmo-project:hover {
+  color: var(--on-surface);
+  /* 玻璃侧栏上的 hover 填充改半透明(W3b):旧 --surface-sink 是不透明硬底,
+     在玻璃面板上会压出一块「实心补丁」;半透白让活背景继续从下面透过。 */
+  background: rgba(255, 255, 255, 0.5);
+}
+.dark .pmo-project:hover {
+  background: rgba(240, 243, 249, 0.07);
+}
+.pmo-project .pmo-project-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variation-settings: 'wght' 400;
+}
+.pmo-project .pmo-project-time {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+.pmo-project.current {
+  background: var(--primary-tint-07);
+  color: var(--on-surface);
+}
+.pmo-project.current .pmo-project-name {
+  font-variation-settings: 'wght' 500;
+}
+.pmo-project.current .pmo-project-time {
+  color: var(--primary);
+}
+/* 选中标记:硬 2px 竖线 → 柔性左缘光(与 loop 卡 .pmo-edge-rest 同一光态语言)。
+   left:-3px + blur + 容器 overflow:hidden → 越界部分内溢成「玻璃里的光」,
+   在 r-card 圆角下不再有硬线戳角的别扭感。选中的材质差由 .current 半透主色底承担。 */
+.pmo-project.current::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 12%;
+  bottom: 12%;
+  width: 11px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, transparent, var(--primary) 26%, color-mix(in srgb, var(--primary) 62%, #e6eefb) 50%, var(--primary) 74%, transparent);
+  filter: blur(5px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.pmo-project.current:hover {
+  background: var(--primary-tint-10);
+}
+
+/* --- Region 5 · RIGHT PANEL (TaskWorkbench config column) --- */
+.pmo-panel {
+  background: var(--surface-sidebar);
+  display: flex;
+  flex-direction: column;
+}
+.pmo-panel-label {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 14px;
+}
+.pmo-panel-label .required {
+  color: var(--error);
+  margin-left: 4px;
+}
+.pmo-panel-label .optional {
+  color: var(--ink-faint);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+  font-weight: 400;
+}
+.pmo-panel-textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--on-surface);
+  resize: none;
+  outline: none;
+  transition: border-color 0.25s var(--ease-develop), background 0.25s var(--ease-develop);
+}
+.pmo-panel-textarea::placeholder {
+  color: var(--ink-faint);
+}
+.pmo-panel-textarea:focus {
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  background: var(--surface-lowest);
+}
+.pmo-panel-select {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.25s var(--ease-develop), background 0.25s var(--ease-develop);
+}
+.pmo-panel-select:hover {
+  border-color: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.pmo-panel-select.open {
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  background: var(--surface-lowest);
+}
+.pmo-panel-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--primary);
+  color: #f4f6f9;
+  border: none;
+  border-radius: var(--r-ctrl);
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 13px;
+  font-variation-settings: 'wght' 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--primary) 35%, transparent);
+  transition: background 0.22s var(--ease-develop), box-shadow 0.22s var(--ease-develop);
+}
+.pmo-panel-submit:hover {
+  background: var(--primary-deep);
+  box-shadow: 0 6px 20px -4px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.pmo-panel-submit:disabled {
+  background: var(--surface-sink);
+  color: var(--ink-faint);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.pmo-panel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 2px;
+  font-size: 13px;
+  position: relative;
+}
+.pmo-panel-row:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--hairline);
+}
+.pmo-panel-row .pmo-panel-key {
+  color: var(--ink-muted);
+}
+.pmo-panel-row .pmo-panel-val {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--primary);
+  letter-spacing: 0.02em;
+}
+
+/* ==========================================================
+   COMPOSER · V3 cold-cream input bar
+   - .pmo-composer            outer card (radius var(--r-card), surface bg)
+   - .pmo-composer.focus      focus state: 1px primary border + bottom underline expand
+   - .pmo-composer.fire       send pulse: one-shot primary halo
+   - .pmo-ibtn                28×28 icon button, var(--r-ctrl) radius
+   - .pmo-send-btn            34×34 filled primary send, with shimmer beam
+   - .pmo-model-chip          inline model picker pill
+   ========================================================== */
+
+.pmo-composer {
+  position: relative;
+  /* 玻璃岛(W3b):同 .pmo-bubble / .pmo-input-shell 一套 token。 */
+  background: var(--glass-panel-bg);
+  border-radius: var(--r-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--shadow-glass);
+  overflow: hidden;
+  transition: background 0.25s var(--ease-develop);
+}
+.pmo-composer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-card);
+  /* 常态 = 极淡玻璃边(挂在 ::before 上,不占布局);focus 时借同一条边变主色 */
+  border: 1px solid var(--glass-panel-border);
+  pointer-events: none;
+  transition: border-color 0.3s var(--ease-develop);
+}
+.pmo-composer.focus::before { border-color: color-mix(in srgb, var(--primary) 22%, transparent); }
+
+.pmo-composer::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--primary) 50%, transparent 100%);
+  transform: translateX(-50%);
+  transition: width 0.5s var(--ease-develop);
+  pointer-events: none;
+  border-radius: 1px;
+}
+.pmo-composer.focus::after { width: 100%; }
+
+.pmo-composer.fire {
+  animation: pmo-input-shimmer 620ms ease-out;
+}
+@keyframes pmo-input-shimmer {
+  0%   { box-shadow: 0 0 0 0 transparent; }
+  40%  { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent), 0 0 32px color-mix(in srgb, var(--primary) 22%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.pmo-ibtn {
+  background: none;
+  border: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: var(--r-ctrl);
+  transition: color 0.3s var(--ease-develop), background 0.3s var(--ease-develop);
+}
+.pmo-ibtn:hover {
+  color: var(--primary);
+  background: var(--surface-lowest);
+}
+.pmo-ibtn.active {
+  /* Stroke renders via currentColor → on-surface ink; fill is set
+     explicitly on the SVG to var(--primary), giving the requested
+     "black outline + blue fill" combo. Background tint anchors the
+     filled chip look. */
+  color: var(--on-surface);
+  background: var(--primary-tint-12);
+}
+.pmo-ibtn.active:hover {
+  background: var(--primary-tint-18);
+}
+.pmo-ibtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* (Legacy 34×34 .pmo-send-btn was removed here — there's a single canonical
+ * 28×28 .pmo-send-btn defined later in Region 6 used by both the empty-state
+ * input shell and the active-state ChatInput, kept in lockstep for visual
+ * consistency. Shimmer animation lives next to that canonical rule.) */
+@keyframes pmo-send-shimmer {
+  from { left: -60%; }
+  to   { left: 130%; }
+}
+
+.pmo-model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-ctrl);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  color: var(--ink-secondary);
+  transition: border-color 0.25s var(--ease-develop), color 0.25s var(--ease-develop);
+}
+.pmo-model-chip:hover {
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  color: var(--on-surface);
+}
+.pmo-model-chip .name {
+  font-size: 12.5px;
+  font-variation-settings: 'wght' 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.pmo-model-chip .version {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   Region 6 · COMPACT INPUT SHELL + INLINE TOOLBAR
+   ──────────────────────────────────────────────────────────────
+   Used by the redesigned TaskWorkbench (empty state). Replaces
+   the legacy right-side configuration panel (.pmo-panel-*)
+   with a single Codex-style centered input + inline toolbar
+   carrying model / conference / memory / reference controls.
+   All radii are 3px to match the Pegasus Spatial design language.
+   ============================================================ */
+
+/* ── Conversation surface · macOS-style frosted glass
+   Shared by empty-state hero AND active-state ChatContainer. These are
+   conceptually the same surface — the dialog between user and Pegasus Spatial —
+   so they share class, bg, and material.
+   The frosted-glass material is composed of three layers:
+     1. Translucent white base (rgba) → the "glass" body itself
+     2. backdrop-filter blur + saturate → frosts whatever is behind
+        (body bg + neighbour panels) for the soft Apple-vibrancy feel
+     3. ::before radial blue overlay → the Pegasus Spatial blue-gray accent
+     4. ::after top-edge highlight → simulates a glass edge lift
+   `> *` z-index:1 keeps actual content above all decorative layers. ── */
+/* 对话区域玻璃(idle/running 才见,毛玻璃感 = 区域玻璃 + 状态层渐入) */
+.pmo-conversation-bg {
+  position: relative;
+  background: color-mix(in srgb, var(--glass-panel-bg) 55%, transparent);
+  backdrop-filter: blur(26px) saturate(150%);
+  /* 对话 pane ↔ 工作区「桌面」的分界缝:冷色发丝左边 + 朝工作区(左)的柔性
+     浮起投影,与侧栏右缘/顶栏下缘同一套层次语言,避免两块玻璃/透明糊在一起。 */
+  border-left: 1px solid rgba(20, 26, 38, 0.07);
+  box-shadow: -12px 0 32px -22px rgba(16, 20, 32, 0.18);
+}
+.dark .pmo-conversation-bg {
+  border-left-color: rgba(240, 243, 249, 0.09);
+  box-shadow: -12px 0 34px -22px rgba(0, 0, 0, 0.5);
+}
+.pmo-conversation-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 900px 600px at 35% 22%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 65%),
+    radial-gradient(ellipse 700px 500px at 75% 50%, color-mix(in srgb, var(--on-surface) 4%, transparent), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+.pmo-conversation-bg::after {
+  /* Top-edge inner highlight — simulates the "glass edge" specular lift
+   * you see on real frosted glass panels; gives the surface a sense of
+   * physical material rather than a flat painted bg. */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, transparent 14%);
+  pointer-events: none;
+  z-index: 0;
+}
+.pmo-conversation-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Dark-mode override for the frosted-glass hero/conversation surfaces.
+ * base 底已由 --glass-panel-bg token 在 .dark 里分流,无需再覆写;
+ * 这里只保留装饰两层的暗色版:
+ *   1. Blue radial overlays bumped slightly so the accent still reads
+ *      against the much darker base
+ *   2. A whisper of white top-edge sheen — strong enough to feel like
+ *      "glass" but not so strong it bleaches the top of the page. ── */
+.dark .pmo-conversation-bg::before {
+  background:
+    radial-gradient(ellipse 900px 600px at 35% 22%, rgba(160, 180, 224, 0.14), transparent 65%),
+    radial-gradient(ellipse 700px 500px at 75% 50%, rgba(120, 145, 200, 0.08), transparent 65%);
+}
+.dark .pmo-conversation-bg::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 14%);
+}
+
+/* ── Centered hero stack (replaces .pmo-hero left-aligned layout) ── */
+.pmo-hero-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+.pmo-hero-stack h1 {
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 64px;
+  line-height: 1.05;
+  margin: 0;
+  /* background-clip:text only paints inside the element's padding box.
+   * With tight line-height the "g" descender falls outside that box,
+   * leaving the tail of g (and y, p, etc.) transparent — letters render
+   * looking like "q" instead of "g". Padding extends the box down. */
+  padding-bottom: 0.12em;
+}
+.pmo-hero-stack .pmo-hero-subtitle {
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 15px;
+  color: var(--ink-muted);
+  font-variation-settings: 'wght' 400;
+  letter-spacing: 0.005em;
+  max-width: 440px;
+  line-height: 1.5;
+  margin: 0;
+}
+.pmo-hero-stack .pmo-hero-subtitle b {
+  color: var(--primary);
+  font-variation-settings: 'wght' 600;
+  letter-spacing: 0.002em;
+}
+.pmo-hero-stack .pmo-hero-meta {
+  display: inline-flex;
+  gap: 22px;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+.pmo-hero-stack .pmo-hero-meta span b {
+  color: var(--ink-secondary);
+  font-weight: 400;
+  margin-right: 6px;
+}
+
+/* ── Input shell · 玻璃岛(W3b · §1.4)
+   半透玻璃底 + backdrop blur,漂在活背景上;硬发丝边 → 极淡玻璃边;
+   深度由 --shadow-glass(含顶部内高光)承担,focus 只在其上叠主色柔光。
+   与 .pmo-bubble / .pmo-recent-card 共用同一套 token。 ── */
+.pmo-input-shell {
+  width: 100%;
+  max-width: 680px;
+  background: var(--glass-panel-bg);
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--r-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--shadow-glass);
+  overflow: visible;
+  position: relative;
+  transition: box-shadow 0.2s var(--ease-develop), border-color 0.2s var(--ease-develop);
+}
+.pmo-input-shell:focus-within {
+  /* 全蓝硬边 → 柔性玻璃焦点:半透主色边 + 柔性主色 halo + 柔下投影(非硬环)。 */
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  box-shadow: var(--shadow-glass),
+              0 0 0 3px color-mix(in srgb, var(--primary) 9%, transparent),
+              0 8px 26px -6px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.pmo-input-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--on-surface);
+  padding: 16px 18px 12px;
+  min-height: 64px;
+}
+.pmo-input-textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/* ── Reference block (expanded state · State 2 / 3) ── */
+.pmo-ref-block {
+  border-top: 1px solid color-mix(in srgb, var(--hairline) 35%, transparent);
+  padding: 12px 18px 14px;
+  background: color-mix(in srgb, var(--surface-sidebar) 50%, transparent);
+}
+.pmo-ref-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.pmo-ref-label-text {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+.pmo-ref-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-ctrl);
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background 0.15s var(--ease-develop), color 0.15s var(--ease-develop);
+}
+.pmo-ref-collapse-btn:hover {
+  background: var(--surface);
+  color: var(--on-surface);
+}
+.pmo-ref-collapse-btn-chev {
+  font-family: var(--font-manrope), var(--font-noto-sc), sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.pmo-ref-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-manrope), var(--font-noto-sc), 'Manrope', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--on-surface);
+  min-height: 48px;
+}
+.pmo-ref-textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+/* ── Reference summary chip (collapsed-with-content · State 4) ── */
+.pmo-ref-summary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 14px;
+  background: color-mix(in srgb, var(--surface-sidebar) 50%, transparent);
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--hairline) 35%, transparent);
+  text-align: left;
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-develop);
+}
+.pmo-ref-summary:hover {
+  background: color-mix(in srgb, var(--primary-tint-weak) 60%, var(--surface-sidebar));
+}
+.pmo-ref-summary-badge {
+  flex-shrink: 0;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--primary);
+  background: var(--primary-tint-weak);
+  padding: 2px 6px;
+  border-radius: var(--r-ctrl);
+  text-transform: uppercase;
+}
+.pmo-ref-summary-preview {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink-secondary, var(--on-surface-variant));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pmo-ref-summary-chev {
+  flex-shrink: 0;
+  font-family: var(--font-manrope), var(--font-noto-sc), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.pmo-ref-summary:hover .pmo-ref-summary-chev {
+  color: var(--primary);
+}
+
+/* ── Bottom toolbar (in input shell) ── */
+.pmo-input-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--hairline) 30%, transparent);
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--surface-sidebar) 30%, transparent);
+}
+
+.pmo-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-ctrl);
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-secondary, var(--on-surface-variant));
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s var(--ease-develop), color 0.15s var(--ease-develop);
+}
+.pmo-tool-btn:hover {
+  background: var(--primary-tint-weak);
+}
+.pmo-tool-btn-icon {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.pmo-tool-btn-caret {
+  font-size: 9px;
+  color: var(--ink-muted);
+  margin-left: 1px;
+}
+.pmo-tool-btn.active {
+  background: var(--primary-tint-weak);
+  color: var(--primary);
+  font-weight: 600;
+}
+.pmo-tool-btn.active .pmo-tool-btn-icon,
+.pmo-tool-btn.active .pmo-tool-btn-caret {
+  color: var(--primary);
+}
+.pmo-tool-btn.model {
+  background: var(--surface);
+}
+.pmo-tool-btn.model .pmo-tool-btn-icon {
+  color: var(--primary);
+}
+.pmo-tool-btn.open {
+  background: var(--surface-lowest);
+  border-color: color-mix(in srgb, var(--hairline) 70%, transparent);
+  color: var(--on-surface);
+  box-shadow: 0 0 0 2px var(--primary-tint-weak);
+}
+
+.pmo-toolbar-spacer {
+  flex: 1;
+}
+
+.pmo-send-btn {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+  border: none;
+  border-radius: var(--r-ctrl);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 28%, transparent);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s var(--ease-develop), opacity 0.15s var(--ease-develop);
+}
+.pmo-send-btn:hover:not(:disabled) {
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.pmo-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+/* Optional shimmer overlay — triggered by hover or by toggling `.fire`
+ * (one-shot animation on send). Kept inactive by default so the button
+ * stays clean unless explicitly animated. */
+.pmo-send-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  opacity: 0;
+}
+.pmo-send-btn:hover::after,
+.pmo-send-btn.fire::after {
+  opacity: 1;
+  animation: pmo-send-shimmer 800ms ease-out;
+}
+/* Stop variant — red bg used when AI is mid-loop and user wants to halt. */
+.pmo-send-btn.stop {
+  background: var(--error);
+  box-shadow: 0 2px 8px rgba(186, 26, 26, 0.28);
+}
+.pmo-send-btn.stop:hover:not(:disabled) {
+  box-shadow: 0 3px 12px rgba(186, 26, 26, 0.4);
+}
+/* "Append" variant — used when AI is loading but user wants to enqueue
+ * another message mid-turn. Auto-width to fit "追加" text. */
+.pmo-send-btn.append {
+  width: auto;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* ── Popover (conference + model picker share base)
+   max-height kept short so opening from a center-screen input doesn't
+   make the popover overlap the hero wordmark behind it (internal list
+   scrolls when items exceed). 玻璃岛(W3b):同 input-shell / recent-card
+   一套 token;浮层需要更强的抬升感,在 --shadow-glass 之上再叠一层
+   大扩散深影。 ── */
+.pmo-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 300px;
+  background: var(--glass-panel-bg);
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--r-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: var(--shadow-glass), 0 24px 48px -8px rgba(16, 20, 32, 0.16);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow: hidden;
+}
+.pmo-popover.model-picker {
+  width: 340px;
+}
+.pmo-popover-search-wrap {
+  padding: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--hairline) 30%, transparent);
+}
+.pmo-popover-search {
+  width: 100%;
+  background: var(--surface-sidebar);
+  border: 1px solid transparent;
+  border-radius: var(--r-ctrl);
+  padding: 7px 10px;
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--on-surface);
+  outline: none;
+}
+.pmo-popover-search::placeholder {
+  color: var(--ink-faint);
+}
+.pmo-popover-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+.pmo-popover-list::-webkit-scrollbar {
+  width: 6px;
+}
+.pmo-popover-list::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+  border-radius: var(--r-pill);
+}
+
+.pmo-popover-custom-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 14px;
+  background: var(--primary-tint-weak);
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--hairline) 25%, transparent);
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s var(--ease-develop);
+}
+.pmo-popover-custom-add:hover {
+  background: var(--primary-tint-mid, color-mix(in srgb, var(--primary) 14%, transparent));
+}
+.pmo-popover-custom-add-plus {
+  width: 14px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.pmo-popover-group-title {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  padding: 10px 14px 5px;
+}
+
+.pmo-popover-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  font-size: 12.5px;
+  color: var(--ink-secondary, var(--on-surface-variant));
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s var(--ease-develop);
+}
+.pmo-popover-item:hover {
+  background: var(--surface-sidebar);
+}
+.pmo-popover-item.selected {
+  background: var(--primary-tint-weak);
+  color: var(--primary);
+  font-weight: 600;
+}
+.pmo-popover-item.selected .pmo-popover-item-check {
+  visibility: visible;
+}
+.pmo-popover-item-check {
+  visibility: hidden;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Model picker · 2-line items ── */
+.pmo-popover-model-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s var(--ease-develop);
+}
+.pmo-popover-model-item:hover {
+  background: var(--surface-sidebar);
+}
+.pmo-popover-model-item-body {
+  flex: 1;
+  min-width: 0;
+}
+.pmo-popover-model-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface);
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+.pmo-popover-model-item-desc {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+.pmo-popover-model-item-check {
+  flex-shrink: 0;
+  visibility: hidden;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.pmo-popover-model-item.selected {
+  background: var(--primary-tint-weak);
+}
+.pmo-popover-model-item.selected .pmo-popover-model-item-name {
+  color: var(--primary);
+}
+.pmo-popover-model-item.selected .pmo-popover-model-item-desc {
+  color: color-mix(in srgb, var(--primary) 70%, var(--ink-muted));
+}
+.pmo-popover-model-item.selected .pmo-popover-model-item-check {
+  visibility: visible;
+}
+
+/* ── Recent projects strip ── */
+.pmo-recent-strip {
+  width: 100%;
+  max-width: 680px;
+}
+.pmo-recent-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.pmo-recent-label::before {
+  content: '▸';
+  color: var(--primary);
+}
+.pmo-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.pmo-recent-card {
+  display: block;
+  width: 100%;
+  /* 玻璃岛(W3b)· 与 .pmo-input-shell 同一套 token — user's rule: "history
+   * cards should have the same background as the chat/input window above"
+   * 依然成立,只是「同底」如今指同一块玻璃。 */
+  background: var(--glass-panel-bg);
+  border: 1px solid var(--glass-panel-border);
+  border-radius: var(--r-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  padding: 10px 12px;
+  text-align: left;
+  font-family: var(--font-manrope), var(--font-noto-sc), system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: var(--shadow-glass);
+  transition: border-color 0.15s var(--ease-develop), box-shadow 0.15s var(--ease-develop);
+}
+.pmo-recent-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--glass-panel-border));
+  box-shadow: var(--shadow-glass), 0 2px 10px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.pmo-recent-card-title {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+.pmo-recent-card-meta {
+  font-family: var(--font-geist-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
+/* Pegasus Spatial landing — a compact creative console, not an onboarding form. */
+.pmo-spatial-home {
+  --home-ink: #191c23;
+  --home-muted: #646b7a;
+  --home-line: rgba(25, 28, 35, .12);
+  --home-mint: #536c9f;
+  position: relative;
+  display: grid;
+  min-height: 100%;
+  width: 100%;
+  grid-template-rows: 1fr auto;
+  overflow: auto;
+  color: var(--home-ink);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(132, 158, 211, .20), transparent 32%),
+    radial-gradient(circle at 12% 84%, rgba(166, 184, 153, .16), transparent 28%),
+    #f8f9fb;
+  isolation: isolate;
+}
+.pmo-spatial-home::before {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: linear-gradient(rgba(42, 51, 70, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(42, 51, 70, .045) 1px, transparent 1px);
+  background-size: 52px 52px;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+.pmo-spatial-home-glow {
+  position: absolute;
+  top: -30%;
+  right: -12%;
+  z-index: -1;
+  width: 70vw;
+  height: 80vh;
+  background: radial-gradient(ellipse, rgba(93, 119, 173, .16), transparent 68%);
+  pointer-events: none;
+}
+.pmo-spatial-home-footer > div > span,
+.pmo-spatial-recents > span { color: var(--home-muted); font-family: var(--font-geist-mono), monospace; font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.pmo-spatial-launcher { width: min(900px, calc(100% - 48px)); margin: auto; padding: 5vh 0 7vh; }
+.pmo-spatial-launcher-kicker { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.pmo-spatial-launcher-kicker span { display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid rgba(93, 119, 173, .32); border-radius: 50%; color: var(--home-mint); font-family: var(--font-geist-mono), monospace; font-size: 9px; background: rgba(255,255,255,.78); }
+.pmo-spatial-launcher-kicker p { margin: 0; color: var(--home-muted); font-size: 11px; }
+.pmo-spatial-launcher h1 { max-width: 780px; margin: 0; font-family: "Iowan Old Style", "Songti SC", Georgia, serif; font-size: clamp(43px, 6.4vw, 82px); font-weight: 500; line-height: .99; letter-spacing: -.055em; }
+.pmo-spatial-launcher-copy { max-width: 650px; margin: 24px 0 32px; color: var(--home-muted); font-size: 13px; line-height: 1.8; }
+.pmo-spatial-composer { overflow: hidden; border: 1px solid rgba(25, 28, 35, .12); border-radius: 16px; background: rgba(255, 255, 255, .91); box-shadow: 0 26px 80px rgba(38, 49, 72, .13), inset 0 1px rgba(255,255,255,.88); backdrop-filter: blur(24px); }
+.pmo-spatial-composer > textarea { display: block; width: 100%; min-height: 150px; resize: vertical; border: 0; padding: 24px 26px 14px; color: var(--home-ink); font-family: inherit; font-size: 17px; line-height: 1.65; background: transparent; outline: none; }
+.pmo-spatial-composer > textarea::placeholder { color: #949ba9; }
+.pmo-spatial-composer:focus-within { border-color: rgba(93, 119, 173, .46); box-shadow: 0 28px 84px rgba(38, 49, 72, .16), 0 0 0 4px rgba(93, 119, 173, .08); }
+.pmo-spatial-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--home-line); padding: 11px; }
+.pmo-spatial-composer-tools { display: flex; min-width: 0; align-items: center; gap: 4px; }
+.pmo-spatial-composer .pmo-tool-btn { min-height: 36px; padding: 7px 10px; color: #646b7a; font-size: 11px; }
+.pmo-spatial-composer .pmo-tool-btn:hover:not(:disabled) { color: var(--home-ink); background: rgba(93, 119, 173, .08); }
+.pmo-spatial-composer .pmo-tool-btn:disabled { cursor: not-allowed; opacity: .42; }
+.pmo-spatial-composer .pmo-tool-btn.model { max-width: 230px; border-color: rgba(32, 37, 34, .09); background: rgba(255, 255, 255, .58); }
+.pmo-spatial-model-name { overflow: hidden; max-width: 170px; text-overflow: ellipsis; white-space: nowrap; }
+.pmo-spatial-composer-previews { display: flex; gap: 9px; overflow-x: auto; border-top: 1px solid rgba(32, 37, 34, .07); padding: 12px 20px; }
+.pmo-spatial-composer-preview { position: relative; width: 68px; height: 68px; flex: 0 0 auto; overflow: hidden; border: 1px solid rgba(25, 28, 35, .12); border-radius: 10px; background: #edf0f5; }
+.pmo-spatial-composer-preview > button { position: absolute; top: 4px; right: 4px; display: grid; width: 20px; height: 20px; place-items: center; border: 0; border-radius: 50%; color: #fff; font-size: 14px; line-height: 1; background: rgba(32, 37, 34, .72); cursor: pointer; backdrop-filter: blur(8px); }
+.pmo-spatial-composer-context { border-top: 1px solid rgba(25, 28, 35, .08); padding: 14px 20px 16px; background: rgba(241, 243, 247, .58); }
+.pmo-spatial-composer-context label { display: block; margin-bottom: 8px; color: var(--home-mint); font-family: var(--font-geist-mono), monospace; font-size: 9px; font-weight: 700; letter-spacing: .14em; }
+.pmo-spatial-composer-context textarea { display: block; width: 100%; resize: vertical; border: 1px solid rgba(25, 28, 35, .12); border-radius: 9px; padding: 11px 12px; color: var(--home-ink); font: inherit; font-size: 12px; line-height: 1.6; background: rgba(255, 255, 255, .82); outline: none; }
+.pmo-spatial-composer-context textarea:focus { border-color: rgba(93, 119, 173, .42); box-shadow: 0 0 0 3px rgba(93, 119, 173, .08); }
+.pmo-spatial-composer-status { padding: 0 20px 10px; color: var(--home-muted); font-size: 10px; }
+.pmo-spatial-composer-status.error { color: var(--danger); }
+.pmo-spatial-start { display: flex; flex: none; align-items: center; gap: 18px; border: 1px solid #536c9f; border-radius: 9px; padding: 12px 15px; color: #fff; font-size: 12px; font-weight: 750; background: linear-gradient(135deg, #536c9f, #3f568a); box-shadow: 0 8px 20px rgba(63, 86, 138, .24); cursor: pointer; }
+.pmo-spatial-start:disabled { cursor: not-allowed; filter: grayscale(.4); opacity: .35; }
+.pmo-spatial-home-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; border-top: 1px solid var(--home-line); padding: 18px clamp(24px, 5vw, 72px) 24px; }
+.pmo-spatial-home-footer p { margin: 6px 0 0; color: var(--home-muted); font-size: 10px; }
+.pmo-spatial-recents { display: flex; max-width: 55%; align-items: center; gap: 7px; }
+.pmo-spatial-recents button { display: flex; min-width: 0; max-width: 200px; align-items: center; gap: 10px; border: 1px solid var(--home-line); border-radius: 9px; padding: 8px 10px; color: var(--home-ink); background: rgba(255,255,255,.72); cursor: pointer; }
+.pmo-spatial-recents b { overflow: hidden; font-size: 10px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.pmo-spatial-recents i { color: var(--home-mint); font-style: normal; }
+@media (max-width: 760px) {
+  .pmo-spatial-launcher { width: min(100% - 28px, 900px); padding-top: 2vh; }
+  .pmo-spatial-launcher h1 { font-size: clamp(38px, 12vw, 58px); }
+  .pmo-spatial-composer-footer { align-items: stretch; flex-direction: column; }
+  .pmo-spatial-composer-tools { overflow-x: auto; }
+  .pmo-spatial-start { justify-content: space-between; }
+  .pmo-spatial-home-footer { align-items: flex-start; flex-direction: column; }
+  .pmo-spatial-recents { display: none; }
+}
+
+/* Workspace panel geometry. Drag handles live in the seams, so the canvas,
+ * navigation and conversation remain one continuous editing surface. */
+.pmo-resizable-panel,
+.pmo-resizable-offset {
+  transition: width 220ms var(--ease-develop), margin-left 220ms var(--ease-develop);
+}
+html[data-panel-resizing='true'],
+html[data-panel-resizing='true'] * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+html[data-panel-resizing='true'] .pmo-resizable-panel,
+html[data-panel-resizing='true'] .pmo-resizable-offset {
+  transition: none !important;
+}
+.pmo-panel-resize-handle {
+  position: absolute;
+  inset-block: 0;
+  z-index: 60;
+  width: 12px;
+  border: 0;
+  padding: 0;
+  cursor: col-resize;
+  touch-action: none;
+  background: transparent;
+  outline: none;
+}
+.pmo-panel-resize-handle[data-resize-edge='right'] { right: -6px; }
+.pmo-panel-resize-handle[data-resize-edge='left'] { left: -6px; }
+.pmo-panel-resize-handle > span {
+  position: absolute;
+  inset-block: 12px;
+  left: 5px;
+  width: 2px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+.pmo-panel-resize-handle:hover > span,
+.pmo-panel-resize-handle:focus-visible > span,
+.pmo-panel-resize-handle[data-active='true'] > span {
+  background: color-mix(in srgb, var(--primary) 68%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 9%, transparent);
+}
